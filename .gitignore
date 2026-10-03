@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+Directory.Build.user.props
+vendor/LibretroUnityFE/
+vendor/SK.Libretro/.git/
+vendor/SK.Libretro/Unity/

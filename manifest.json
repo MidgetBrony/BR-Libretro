@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "br-libretro",
+  "name": "BR-Libretro",
+  "author": "MidgetBrony",
+  "description": "Experimental in-process libretro emulation for BOXROOM with configurable input and physical cartridge models.",
+  "repository": "https://github.com/MidgetBrony/BR-Libretro",
+  "experimental": true,
+  "requirements": { "melonLoader": "0.7.0" },
+  "dependencies": [
+    {
+      "manifest": "https://raw.githubusercontent.com/MidgetBrony/Boxroom-TV/refs/heads/main/manifest.json",
+      "minimumVersion": "4.0.1",
+      "required": true
+    },
+    {
+      "manifest": "https://raw.githubusercontent.com/MidgetBrony/BR-MediaAPI/refs/heads/main/manifest.json",
+      "minimumVersion": "1.1.7",
+      "required": true
+    },
+    {
+      "manifest": "https://raw.githubusercontent.com/MidgetBrony/ModsPanel/refs/heads/master/manifest.json",
+      "minimumVersion": "2.6.2",
+      "required": true
+    }
+  ],
+  "release": {
+    "provider": "github",
+    "asset": "BR-Libretro-*.zip",
+    "checksumAsset": "SHA256SUMS.txt",
+    "destination": "Mods"
+  }
+}
