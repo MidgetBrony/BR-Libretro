@@ -42,7 +42,7 @@ public sealed class LibretroRuntime : IDisposable
         try
         {
             var settings = new WrapperSettings(Platform.Win) {
-                MainDirectory = DataPaths.Root, SystemDirectory = DataPaths.Bios, TempDirectory = Path.Combine(DataPaths.Root, "temp"), LogLevel = LogLevel.Info,
+                MainDirectory = DataPaths.Root, SystemDirectory = DataPaths.Bios, TempDirectory = DataPaths.Temp, LogLevel = LogLevel.Info,
                 LogProcessor = new BrLogProcessor(), GraphicsProcessor = graphics, AudioProcessor = audio,
                 InputProcessor = input, LedProcessor = new NullLedProcessor(), MessageProcessor = new NullMessageProcessor()
             };

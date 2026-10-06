@@ -40,6 +40,8 @@ Keyboard player-one defaults: arrows, Z/B, X/A, A/Y, S/X, Enter/Start, Right Shi
 
 Open **Settings > Mods > BR-Libretro > Keyboard / gamepad bindings** to configure controls. Choose Keyboard or Gamepad bindings, select an action, release the old input, and press the replacement. Keyboard bindings can be cleared with Backspace during capture. The menu also restores all defaults. Bindings persist in `UserData/MelonPreferences.cfg`.
 
+Open **Settings > Mods > BR-Libretro > Libretro core installer** to install or update cores from Libretro's official Windows x64 buildbot. The popup includes recommended cores, a searchable and paged live catalogue, installed-core management, and an editor for mapping game-file extensions to cores. Downloads are validated as ZIP archives containing the expected x64 DLL before installation. Updating an existing core keeps its previous DLL in `Documents\br-libretro\cores\backups`; mapping changes keep backups under `config\backups`. The installer does not download games, BIOS or firmware.
+
 ## Architecture
 
 - `vendor/SK.Libretro/Scripts`: pinned upstream engine-independent runtime (MIT).

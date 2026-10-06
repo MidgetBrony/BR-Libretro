@@ -32,6 +32,7 @@
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="glTFast"><HintPath>$(GamePath)\BOXROOM_Data\Managed\glTFast.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.InputSystem"><HintPath>$(GamePath)\BOXROOM_Data\Managed\Unity.InputSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FMODUnity"><HintPath>$(GamePath)\BOXROOM_Data\Managed\FMODUnity.dll</HintPath><Private>false</Private></Reference>

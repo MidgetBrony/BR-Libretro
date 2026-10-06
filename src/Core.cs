@@ -41,6 +41,7 @@ public sealed class Core : MelonMod
     public override void OnInitializeMelon()
     {
         DataPaths.Ensure(); coreMap = CoreMap.Load();
+        CoreInstaller.Initialize(coreMap);
         presentations = new LibretroMediaPresentation(coreMap);
         MelonPreferences_Category prefs = MelonPreferences.CreateCategory("BR-Libretro");
         powerKey = prefs.CreateEntry("PowerKey", "F2", "TV focus / power key");
@@ -274,6 +275,7 @@ public sealed class Core : MelonMod
                 value => { tvVolume.Value = Mathf.Clamp01(value); MelonPreferences.Save(); }, 0f, 1f, false, "0%")
             .AddSlider("range", "TV audio range", () => audioRange.Value,
                 value => { audioRange.Value = Mathf.Clamp(value, 1f, 8f); MelonPreferences.Save(); }, 1f, 8f, false, "0.0 m")
+            .AddButton("core-installer", "Libretro core installer", "OPEN", CoreInstaller.OpenMenu)
             .AddButton("configure-inputs", "Keyboard / gamepad bindings", "CONFIGURE", InputBindings.OpenMenu)
             .AddLabel("controls", "Tap the power key to enter or leave TV controls. Hold it to stop the game. Configure player-one keyboard and gamepad bindings above. An auto-off value of 0 disables the timer.");
     }

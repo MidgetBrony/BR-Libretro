@@ -16,22 +16,62 @@ internal sealed class CoreMap
         string path = Path.Combine(DataPaths.Config, "core-map.json");
         if (!File.Exists(path))
         {
-            var defaults = new CoreMap();
-            defaults.Extensions["nes"] = "mesen";
-            defaults.Extensions["fds"] = "mesen";
-            defaults.Extensions["sfc"] = "snes9x";
-            defaults.Extensions["smc"] = "snes9x";
-            defaults.Extensions["gb"] = "gambatte";
-            defaults.Extensions["gbc"] = "gambatte";
-            defaults.Extensions["gba"] = "mgba";
-            defaults.Extensions["md"] = "genesis_plus_gx";
-            defaults.Extensions["gen"] = "genesis_plus_gx";
-            defaults.Extensions["cue"] = "pcsx_rearmed";
-            defaults.Extensions["wad"] = "prboom";
-            File.WriteAllText(path, JsonConvert.SerializeObject(defaults, Formatting.Indented));
+            CoreMap defaults = CreateDefaults();
+            defaults.Save();
             return defaults;
         }
-        return JsonConvert.DeserializeObject<CoreMap>(File.ReadAllText(path)) ?? new CoreMap();
+        CoreMap map = JsonConvert.DeserializeObject<CoreMap>(File.ReadAllText(path)) ?? new CoreMap();
+        map.Extensions = new Dictionary<string, string>(map.Extensions ?? new(), StringComparer.OrdinalIgnoreCase);
+        return map;
+    }
+
+    internal static CoreMap CreateDefaults()
+    {
+        var defaults = new CoreMap();
+        defaults.Extensions["nes"] = "mesen";
+        defaults.Extensions["fds"] = "mesen";
+        defaults.Extensions["sfc"] = "snes9x";
+        defaults.Extensions["smc"] = "snes9x";
+        defaults.Extensions["gb"] = "gambatte";
+        defaults.Extensions["gbc"] = "gambatte";
+        defaults.Extensions["gba"] = "mgba";
+        defaults.Extensions["md"] = "genesis_plus_gx";
+        defaults.Extensions["gen"] = "genesis_plus_gx";
+        defaults.Extensions["cue"] = "pcsx_rearmed";
+        defaults.Extensions["wad"] = "prboom";
+        return defaults;
+    }
+
+    internal void RestoreDefaults()
+    {
+        Extensions.Clear();
+        foreach (KeyValuePair<string, string> pair in CreateDefaults().Extensions)
+            Extensions[pair.Key] = pair.Value;
+        Save();
+    }
+
+    internal void Save()
+    {
+        Directory.CreateDirectory(DataPaths.Config);
+        string path = Path.Combine(DataPaths.Config, "core-map.json");
+        string staging = path + "." + Guid.NewGuid().ToString("N") + ".staging";
+        try
+        {
+            File.WriteAllText(staging, JsonConvert.SerializeObject(this, Formatting.Indented));
+            if (File.Exists(path))
+            {
+                string backups = Path.Combine(DataPaths.Config, "backups");
+                Directory.CreateDirectory(backups);
+                string backup = Path.Combine(backups,
+                    "core-map-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + ".json");
+                File.Replace(staging, path, backup, true);
+            }
+            else File.Move(staging, path);
+        }
+        finally
+        {
+            if (File.Exists(staging)) File.Delete(staging);
+        }
     }
 
     internal bool TryResolve(string launchExe, string launchArguments, out string core, out string rom)
