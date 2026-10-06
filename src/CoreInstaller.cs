@@ -152,7 +152,7 @@ internal static class CoreInstaller
     {
         using UnityWebRequest request = UnityWebRequest.Get(BuildbotRoot);
         request.timeout = 60;
-        request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.12");
+        request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.13");
         UnityWebRequestAsyncOperation operation = null;
         string failure = null;
         try { operation = request.SendWebRequest(); }
@@ -189,7 +189,7 @@ internal static class CoreInstaller
         {
             using UnityWebRequest infoRequest = UnityWebRequest.Get(CoreInfoUrl);
             infoRequest.timeout = 60;
-            infoRequest.SetRequestHeader("User-Agent", "BR-Libretro/0.4.12");
+            infoRequest.SetRequestHeader("User-Agent", "BR-Libretro/0.4.13");
             UnityWebRequestAsyncOperation infoOperation = null;
             try { infoOperation = infoRequest.SendWebRequest(); }
             catch (Exception ex) { MelonLogger.Warning("Could not request Libretro core metadata: " + ex.Message); }
@@ -441,7 +441,7 @@ internal static class CoreInstaller
             request = new UnityWebRequest(package.DownloadUrl, "GET",
                 new DownloadHandlerFile(archivePath), null);
             request.timeout = 120;
-            request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.12");
+            request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.13");
         }
         catch (Exception ex) { failure = ex.Message; }
 
