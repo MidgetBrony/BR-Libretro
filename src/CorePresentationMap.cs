@@ -72,8 +72,8 @@ internal sealed class CorePresentation
     public float[] HeldRotation { get; set; } = { 0f, 0f, 0f };
     public float[] InspectionRotation { get; set; } = { 180f, 0f, 0f };
     public float FaceRotationDegrees { get; set; } = 180f;
-    public float ShelfSpineQuarterTurnDegrees { get; set; } = 90f;
-    public float ShelfFaceUpQuarterTurnDegrees { get; set; } = 90f;
+    public float ShelfSpineQuarterTurnDegrees { get; set; } = 180f;
+    public float ShelfFaceUpQuarterTurnDegrees { get; set; } = 180f;
     public float[] Offset { get; set; } = { 0f, 0f, 0f };
     public string LabelMaterial { get; set; } = "Material.001";
     public float LabelRotationDegrees { get; set; } = 180f;
