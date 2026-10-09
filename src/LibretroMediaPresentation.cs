@@ -289,7 +289,7 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         float width = bounds.size.x * 0.52f;
         float height = bounds.size.z * 0.34f;
         float depth = Mathf.Max(0.0015f, bounds.size.y * 0.0004f);
-        Vector3 center = new(bounds.center.x, bounds.max.y + depth * 0.5f, bounds.center.z);
+        Vector3 center = new(bounds.center.x, bounds.min.y - depth * 0.5f, bounds.center.z);
 
         GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         panel.name = "NES Top Title Label";
@@ -309,8 +309,8 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
         GameObject titleObject = new("NES Top Title");
         titleObject.transform.SetParent(transform, false);
-        titleObject.transform.localPosition = new Vector3(center.x, bounds.max.y + depth * 1.1f, center.z);
-        titleObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        titleObject.transform.localPosition = new Vector3(center.x, bounds.min.y - depth * 1.1f, center.z);
+        titleObject.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
 
         TextMesh title = titleObject.AddComponent<TextMesh>();
         title.text = game?.Name ?? string.Empty;
