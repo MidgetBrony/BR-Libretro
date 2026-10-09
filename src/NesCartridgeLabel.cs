@@ -29,7 +29,7 @@ internal static class NesCartridgeLabel
         {
             if (readable != null)
             {
-                const int faceX = 10, faceY = 55, faceWidth = 300, faceHeight = 446;
+                const int faceX = 10, faceY = 55, faceWidth = TextureSize - 20, faceHeight = 446;
                 Color32[] source = readable.GetPixels32();
                 for (int y = 0; y < faceHeight; y++)
                 for (int x = 0; x < faceWidth; x++)
@@ -134,7 +134,7 @@ internal static class NesCartridgeLabel
             for (int y = 0; y < TitleHeight; y++)
             for (int x = 0; x < TitleWidth; x++)
             {
-                int source = (y * TitleWidth + x) * 4;
+                int source = ((TitleHeight - 1 - y) * TitleWidth + (TitleWidth - 1 - x)) * 4;
                 pixels[(8 + y) * TextureSize + x] =
                     new Color32(bytes[source + 2], bytes[source + 1], bytes[source], 255);
             }
