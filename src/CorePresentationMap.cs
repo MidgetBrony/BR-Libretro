@@ -31,11 +31,13 @@ internal sealed class CorePresentationMap
         foreach (CorePresentation presentation in map.Cores.Values)
         {
             if (string.Equals(Path.GetFileName(presentation.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase)
-                && Math.Abs(presentation.LabelRotationDegrees) < 0.01f
                 && !presentation.LabelMirrorHorizontal
-                && presentation.LabelMirrorVertical)
+                && presentation.LabelMirrorVertical
+                && (Math.Abs(presentation.LabelRotationDegrees) < 0.01f
+                    || Math.Abs(presentation.LabelRotationDegrees - 180f) < 0.01f))
             {
                 presentation.LabelRotationDegrees = 180f;
+                presentation.LabelMirrorHorizontal = true;
                 updated = true;
             }
         }
@@ -73,7 +75,7 @@ internal sealed class CorePresentation
     public float[] Offset { get; set; } = { 0f, 0f, 0f };
     public string LabelMaterial { get; set; } = "Material.001";
     public float LabelRotationDegrees { get; set; } = 180f;
-    public bool LabelMirrorHorizontal { get; set; } = false;
+    public bool LabelMirrorHorizontal { get; set; } = true;
     public bool LabelMirrorVertical { get; set; } = true;
     public bool UseGameArtwork { get; set; } = true;
 

@@ -7,7 +7,7 @@ namespace BR_Libretro;
 internal static class NesCartridgeLabel
 {
     private const int TextureSize = 512;
-    private const int TitleWidth = 300;
+    private const int TitleWidth = TextureSize;
     private const int TitleHeight = 44;
 
     internal static Texture2D Create(string title, Texture artwork)
@@ -19,7 +19,7 @@ internal static class NesCartridgeLabel
         {
             bool border = x < 9 || x > 308 || y < 9 || y > 500;
             bool spine = y < 52;
-            pixels[y * TextureSize + x] = spine && x <= 309
+            pixels[y * TextureSize + x] = spine
                 ? new Color32(0, 0, 0, 255)
                 : border ? new Color32(12, 17, 20, 255) : new Color32(27, 41, 48, 255);
         }
@@ -135,7 +135,7 @@ internal static class NesCartridgeLabel
             for (int x = 0; x < TitleWidth; x++)
             {
                 int source = (y * TitleWidth + x) * 4;
-                pixels[(8 + y) * TextureSize + 10 + x] =
+                pixels[(8 + y) * TextureSize + x] =
                     new Color32(bytes[source + 2], bytes[source + 1], bytes[source], 255);
             }
         }
