@@ -20,6 +20,7 @@ public sealed class LibretroRuntime : IDisposable
     private readonly string coreName, romPath;
     private Thread thread;
     private volatile bool running, stopRequested;
+    private int disposeStarted;
     private Wrapper wrapper;
 
     private LibretroRuntime(string coreName, string romPath, AudioBridge audio)
@@ -65,6 +66,7 @@ public sealed class LibretroRuntime : IDisposable
         {
             try { wrapper?.StopContent(); } catch (Exception ex) { MelonLogger.Warning("Libretro shutdown: " + ex.Message); }
             wrapper = null; running = false;
+            MelonLogger.Msg("Libretro core thread stopped.");
         }
     }
 
@@ -73,9 +75,20 @@ public sealed class LibretroRuntime : IDisposable
     internal void UpdateInput() => input.UpdateSnapshot();
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposeStarted, 1) != 0) return;
+        input.Enabled = false;
         stopRequested = true;
-        if (thread != null && thread.IsAlive) thread.Join(2000);
-        graphics.Dispose(); audio?.Dispose();
+        Thread worker = thread;
+        if (worker != null && worker.IsAlive && worker != Thread.CurrentThread && !worker.Join(10000))
+        {
+            MelonLogger.Error("Libretro core thread did not stop within 10 seconds. Native and Unity resources were deliberately left intact to avoid a shutdown use-after-free.");
+            return;
+        }
+
+        thread = null;
+        graphics.DisposeUnityResources();
+        audio?.Dispose();
         if (ReferenceEquals(Current, this)) Current = null;
+        MelonLogger.Msg("Libretro runtime shutdown completed cleanly.");
     }
 }

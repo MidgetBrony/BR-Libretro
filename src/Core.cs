@@ -12,7 +12,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.4.13", "MidgetBrony")]
+[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.4.14", "MidgetBrony")]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 [assembly: MelonAdditionalDependencies("Boxroom_TV", "ModsPanel", "BR_MediaAPI")]
 
@@ -37,6 +37,7 @@ public sealed class Core : MelonMod
     private MelonPreferences_Entry<float> holdToStopSeconds, autoOffMinutes, tvVolume, audioRange;
     private readonly List<InputActionMap> lockedActionMaps = new();
     private readonly List<PlayerInput> lockedPlayerInputs = new();
+    private bool applicationQuitting;
 
     public override void OnInitializeMelon()
     {
@@ -187,13 +188,24 @@ public sealed class Core : MelonMod
         tvMode = active; unfocusedSince = active ? -1f : Time.unscaledTime; runtime.SetInputEnabled(active);
     }
 
-    private void StopRuntime()
+    private void StopRuntime(bool restorePlayerState = true)
     {
-        if (tvMode) SetTvMode(false);
-        runtime?.Dispose(); runtime = null;
+        if (restorePlayerState && tvMode) SetTvMode(false);
+        else if (!restorePlayerState)
+        {
+            tvMode = false;
+            lockedActionMaps.Clear();
+            lockedPlayerInputs.Clear();
+            camera = null;
+            controller = null;
+        }
+
+        LibretroRuntime stoppingRuntime = runtime;
+        runtime = null;
+        stoppingRuntime?.Dispose();
         audio?.Dispose();
         audio = null;
-        displayLease?.Dispose();
+        if (restorePlayerState) displayLease?.Dispose();
         displayLease = null;
         unfocusedSince = -1f;
         firstFrameAttached = false;
@@ -280,11 +292,18 @@ public sealed class Core : MelonMod
             .AddLabel("controls", "Tap the power key to enter or leave TV controls. Hold it to stop the game. Configure player-one keyboard and gamepad bindings above. An auto-off value of 0 disables the timer.");
     }
 
+    public override void OnApplicationQuit()
+    {
+        applicationQuitting = true;
+        LoggerInstance.Msg("BOXROOM quit requested; stopping the active libretro session before engine shutdown.");
+        StopRuntime(false);
+    }
+
     public override void OnDeinitializeMelon()
     {
         InputBindings.CancelCapture();
+        StopRuntime(!applicationQuitting);
         presentations?.Dispose();
         presentations = null;
-        StopRuntime();
     }
 }

@@ -89,7 +89,17 @@ internal sealed class BrGraphicsProcessor : IGraphicsProcessor
         }
         Texture.LoadRawTextureData(frame); Texture.Apply(false, false); texture = Texture; return true;
     }
-    public void Dispose() { pending = null; if (Texture != null) UnityEngine.Object.Destroy(Texture); Texture = null; }
+    public void Dispose()
+    {
+        lock (gate) pending = null;
+    }
+
+    internal void DisposeUnityResources()
+    {
+        lock (gate) pending = null;
+        if (Texture != null) UnityEngine.Object.Destroy(Texture);
+        Texture = null;
+    }
 }
 
 internal sealed class BrInputProcessor : IInputProcessor
