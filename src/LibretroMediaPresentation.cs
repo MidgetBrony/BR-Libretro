@@ -284,9 +284,11 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         Bounds bounds = BoundsRelativeTo(transform, renderers);
         if (bounds.size.x <= 0.001f || bounds.size.y <= 0.001f || bounds.size.z <= 0.001f) return;
 
-        float width = bounds.size.x * 0.64f;
-        float height = bounds.size.z * 0.62f;
-        float depth = Mathf.Max(0.008f, bounds.size.y * 0.002f);
+        // NES edge labels are small paper/vinyl insets within the moulded shell,
+        // not plaques covering most of the cartridge thickness.
+        float width = bounds.size.x * 0.52f;
+        float height = bounds.size.z * 0.34f;
+        float depth = Mathf.Max(0.0015f, bounds.size.y * 0.0004f);
         Vector3 center = new(bounds.center.x, bounds.max.y + depth * 0.5f, bounds.center.z);
 
         GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -336,8 +338,8 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
         Vector3 textSize = titleRenderer.localBounds.size;
         float estimatedWidth = Mathf.Max(1, characterCount) * 32f;
-        float fitWidth = availableWidth * 0.88f / (textSize.x > 0.0001f ? textSize.x : estimatedWidth);
-        float fitHeight = availableHeight * 0.68f / (textSize.y > 0.0001f ? textSize.y : 64f);
+        float fitWidth = availableWidth * 0.84f / (textSize.x > 0.0001f ? textSize.x : estimatedWidth);
+        float fitHeight = availableHeight * 0.56f / (textSize.y > 0.0001f ? textSize.y : 64f);
         float fit = Mathf.Min(fitWidth, fitHeight);
         titleTransform.localScale = Vector3.one * Mathf.Clamp(fit, 0.00001f, 0.1f);
         titleRenderer.enabled = true;
