@@ -25,9 +25,9 @@ No cores, BIOS files, or ROMs are distributed by this project.
 
 ## Physical core models
 
-Games resolved to the `mesen`, `fceumm`, or `nestopia` cores use an NES cartridge instead of the standard BOXROOM game case. The original game object, collider, pickup behavior, launch data, and saved placement remain unchanged; only its visible shell is replaced. BOXROOM cover art is applied only to the cartridge's broad front label. A separate black Segoe UI title label is generated on the cartridge's top edge so its name faces outward on a shelf.
+Games resolved to the `mesen`, `fceumm`, or `nestopia` cores use an NES cartridge instead of the standard BOXROOM game case. The original game object, collider, pickup behavior, launch data, and saved placement remain unchanged; only its visible shell is replaced. BOXROOM cover art fills the cartridge's broad front label, while a black Segoe UI title strip wraps onto the exposed edge. Face-out, spine-out and face-up shelf placements—and their green placement previews—each orient the cartridge independently.
 
-`Documents\br-libretro\config\core-presentation.json` maps core names to GLB models. Add another entry and place its GLB in `Documents\br-libretro\models` to give another core its own physical format. Each entry supports model filename, height in metres, placed/shelf rotation, inspection rotation, face rotation, XYZ offset, label material name, artwork on/off, and an enable switch. Restart BOXROOM after editing this file.
+`Documents\br-libretro\config\core-presentation.json` maps core names to GLB models. Add another entry and place its GLB in `Documents\br-libretro\models` to give another core its own physical format. Each entry supports model filename, height in metres, placed/shelf rotation, separate spine and face-up shelf corrections, inspection rotation, face rotation, XYZ offset, label material name, artwork on/off, and an enable switch. Restart BOXROOM after editing this file.
 
 ## First test
 
@@ -48,7 +48,7 @@ Open **Settings > Mods > BR-Libretro > Libretro core installer** to install or u
 - `src/Processors.cs`: BOXROOM video and input bridge.
 - `src/AudioBridge.cs`: Unity spatial-audio bridge attached to the TV.
 - `src/Core.cs`: BOXROOM interaction, camera lifecycle, and exclusive Boxroom-TV display lease.
-- `src/CorePresentationManager.cs`: per-core physical game model replacement while retaining BOXROOM gameplay identity.
+- `src/LibretroMediaPresentation.cs`: per-core physical game model replacement while retaining BOXROOM gameplay identity.
 - `UnityAssets`: editable bundle handoff for future native-style screens and controls. Emulation logic stays in the DLL.
 
 Boxroom-TV and ModsPanel are required. Boxroom-TV owns screen materials and arbitration, ensuring videos and emulators cannot overwrite each other. Existing TV playback is paused and restored after an emulator releases its display. BOXROOM already ships the required Newtonsoft.Json and Unity runtime assemblies; releases must not bundle duplicates.
