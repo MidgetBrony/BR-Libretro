@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using TMPro;
 using UnityEngine;
 
 namespace BR_Libretro;
@@ -65,8 +64,7 @@ internal sealed class LibretroMediaPresentation : IDisposable
 internal sealed class LibretroMediaVisual : MonoBehaviour
 {
     private static readonly Dictionary<string, Task<GltfImport>> Imports = new(StringComparer.OrdinalIgnoreCase);
-    private static TMP_FontAsset topLabelFont;
-    private static Font topLabelSourceFont;
+    private static Font topLabelFont;
     private SteamGameData game;
     private CorePresentation definition;
     private MediaVisualOverrideContext context;
@@ -311,25 +309,30 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         titleObject.transform.localPosition = new Vector3(center.x, center.y, bounds.max.z + depth * 1.1f);
         titleObject.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
-        TextMeshPro title = titleObject.AddComponent<TextMeshPro>();
+        TextMesh title = titleObject.AddComponent<TextMesh>();
         title.text = game?.Name ?? string.Empty;
         title.font = GetTopLabelFont();
         title.color = Color.white;
-        title.alignment = TextAlignmentOptions.Center;
-        title.enableAutoSizing = true;
-        title.fontSizeMin = Mathf.Max(0.035f, height * 0.12f);
-        title.fontSizeMax = Mathf.Max(0.08f, height * 0.58f);
-        title.textWrappingMode = TextWrappingModes.NoWrap;
-        title.overflowMode = TextOverflowModes.Ellipsis;
-        title.rectTransform.sizeDelta = new Vector2(width * 0.9f, height * 0.78f);
+        title.anchor = TextAnchor.MiddleCenter;
+        title.alignment = TextAlignment.Center;
+        title.fontSize = 64;
+        title.characterSize = 1f;
+        title.richText = false;
+
+        MeshRenderer titleRenderer = title.GetComponent<MeshRenderer>();
+        titleRenderer.sharedMaterial = title.font.material;
+        Vector3 textSize = titleRenderer.localBounds.size;
+        float fitWidth = textSize.x > 0.0001f ? width * 0.88f / textSize.x : 0.01f;
+        float fitHeight = textSize.y > 0.0001f ? height * 0.68f / textSize.y : 0.01f;
+        float fit = Mathf.Min(fitWidth, fitHeight);
+        titleObject.transform.localScale = Vector3.one * Mathf.Clamp(fit, 0.0001f, 1f);
     }
 
-    private static TMP_FontAsset GetTopLabelFont()
+    private static Font GetTopLabelFont()
     {
         if (topLabelFont != null) return topLabelFont;
-        topLabelSourceFont = Font.CreateDynamicFontFromOSFont("Segoe UI", 64)
+        topLabelFont = Font.CreateDynamicFontFromOSFont("Segoe UI", 64)
             ?? Font.CreateDynamicFontFromOSFont("Arial", 64);
-        topLabelFont = TMP_FontAsset.CreateFontAsset(topLabelSourceFont);
         topLabelFont.name = "BR-Libretro Segoe UI";
         return topLabelFont;
     }
