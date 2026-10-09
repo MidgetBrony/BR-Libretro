@@ -6,6 +6,7 @@ using SteamShelf;
 using SteamShelf.Media;
 using SteamShelf.Placeables;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -284,16 +285,16 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         if (bounds.size.x <= 0.001f || bounds.size.y <= 0.001f || bounds.size.z <= 0.001f) return;
 
         float width = bounds.size.x * 0.64f;
-        float height = bounds.size.y * 0.62f;
-        float depth = Mathf.Max(0.008f, bounds.size.z * 0.002f);
-        Vector3 center = new(bounds.center.x, bounds.center.y, bounds.max.z + depth * 0.5f);
+        float height = bounds.size.z * 0.62f;
+        float depth = Mathf.Max(0.008f, bounds.size.y * 0.002f);
+        Vector3 center = new(bounds.center.x, bounds.max.y + depth * 0.5f, bounds.center.z);
 
         GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         panel.name = "NES Top Title Label";
         panel.transform.SetParent(transform, false);
         panel.transform.localPosition = center;
         panel.transform.localRotation = Quaternion.identity;
-        panel.transform.localScale = new Vector3(width, height, depth);
+        panel.transform.localScale = new Vector3(width, depth, height);
         Collider collider = panel.GetComponent<Collider>();
         if (collider != null) Destroy(collider);
 
@@ -306,8 +307,8 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
         GameObject titleObject = new("NES Top Title");
         titleObject.transform.SetParent(transform, false);
-        titleObject.transform.localPosition = new Vector3(center.x, center.y, bounds.max.z + depth * 1.1f);
-        titleObject.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        titleObject.transform.localPosition = new Vector3(center.x, bounds.max.y + depth * 1.1f, center.z);
+        titleObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
 
         TextMesh title = titleObject.AddComponent<TextMesh>();
         title.text = game?.Name ?? string.Empty;
@@ -318,14 +319,28 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         title.fontSize = 64;
         title.characterSize = 1f;
         title.richText = false;
+        title.font.RequestCharactersInTexture(title.text, title.fontSize, FontStyle.Normal);
 
         MeshRenderer titleRenderer = title.GetComponent<MeshRenderer>();
         titleRenderer.sharedMaterial = title.font.material;
+        titleRenderer.enabled = false;
+        titleObject.transform.localScale = Vector3.zero;
+        StartCoroutine(FitTopLabelText(titleObject.transform, titleRenderer, width, height, title.text.Length));
+    }
+
+    private static IEnumerator FitTopLabelText(Transform titleTransform, MeshRenderer titleRenderer,
+        float availableWidth, float availableHeight, int characterCount)
+    {
+        yield return null;
+        if (titleTransform == null || titleRenderer == null) yield break;
+
         Vector3 textSize = titleRenderer.localBounds.size;
-        float fitWidth = textSize.x > 0.0001f ? width * 0.88f / textSize.x : 0.01f;
-        float fitHeight = textSize.y > 0.0001f ? height * 0.68f / textSize.y : 0.01f;
+        float estimatedWidth = Mathf.Max(1, characterCount) * 32f;
+        float fitWidth = availableWidth * 0.88f / (textSize.x > 0.0001f ? textSize.x : estimatedWidth);
+        float fitHeight = availableHeight * 0.68f / (textSize.y > 0.0001f ? textSize.y : 64f);
         float fit = Mathf.Min(fitWidth, fitHeight);
-        titleObject.transform.localScale = Vector3.one * Mathf.Clamp(fit, 0.0001f, 1f);
+        titleTransform.localScale = Vector3.one * Mathf.Clamp(fit, 0.00001f, 0.1f);
+        titleRenderer.enabled = true;
     }
 
     private static Font GetTopLabelFont()
