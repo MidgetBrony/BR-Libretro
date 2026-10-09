@@ -5,9 +5,11 @@ using MelonLoader;
 using SteamShelf;
 using SteamShelf.Media;
 using SteamShelf.Placeables;
+using SteamShelf.PlayerTools;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -64,6 +66,10 @@ internal sealed class LibretroMediaPresentation : IDisposable
 internal sealed class LibretroMediaVisual : MonoBehaviour
 {
     private static readonly Dictionary<string, Task<GltfImport>> Imports = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly FieldInfo CurrentMediaPlacementField = typeof(PlayerInteractionTool)
+        .GetField("currentMediaPlacement", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly FieldInfo CurrentLookingAtContainerField = typeof(PlayerInteractionTool)
+        .GetField("currentLookingAtContainer", BindingFlags.Instance | BindingFlags.NonPublic);
     private SteamGameData game;
     private CorePresentation definition;
     private MediaVisualOverrideContext context;
@@ -72,6 +78,7 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private Texture2D generatedLabelTexture;
     private Texture appliedArtwork;
     private string core;
+    private float appliedPlacementTurn = float.NaN;
 
     internal void Initialize(MediaVisualOverrideContext newContext, SteamGameData newGame, string newCore, CorePresentation newDefinition)
     {
@@ -106,6 +113,9 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
     private void Update()
     {
+        float placementTurn = ShelfPlacementQuarterTurn();
+        if (float.IsNaN(appliedPlacementTurn) || Mathf.Abs(Mathf.DeltaAngle(appliedPlacementTurn, placementTurn)) > 0.1f)
+            ConfigureTransform();
         ApplyArtwork();
     }
 
@@ -154,7 +164,8 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         };
         transform.localPosition = Vector3.zero;
         transform.localScale = Vector3.one;
-        float faceRotation = definition.FaceRotationDegrees + ShelfPlacementQuarterTurn();
+        appliedPlacementTurn = ShelfPlacementQuarterTurn();
+        float faceRotation = definition.FaceRotationDegrees + appliedPlacementTurn;
         transform.localRotation = Quaternion.Euler(Value(rotation, 0), Value(rotation, 1), Value(rotation, 2))
             * Quaternion.AngleAxis(faceRotation, Vector3.forward);
 
@@ -220,7 +231,20 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
     private float ShelfPlacementQuarterTurn()
     {
-        if (context?.Usage != MediaVisualUsage.Shelf || context.Target == null) return 0f;
+        if (context?.Target == null) return 0f;
+
+        if (context.Usage == MediaVisualUsage.Loose && IsLoosePlacementPreview()
+            && TryGetShelfPreviewPlacement(out MediaPlacement previewPlacement))
+        {
+            return previewPlacement switch
+            {
+                MediaPlacement.Spine => definition.ShelfSpineQuarterTurnDegrees,
+                MediaPlacement.FaceUp => definition.ShelfFaceUpQuarterTurnDegrees,
+                _ => 0f
+            };
+        }
+
+        if (context.Usage != MediaVisualUsage.Shelf) return 0f;
 
         Quaternion targetRotation = context.Target.transform.localRotation;
         if (Quaternion.Angle(targetRotation, Quaternion.Euler(90f, -90f, 0f)) < 2f)
@@ -228,6 +252,20 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         if (Quaternion.Angle(targetRotation, Quaternion.Euler(180f, -90f, 0f)) < 2f)
             return definition.ShelfFaceUpQuarterTurnDegrees;
         return 0f;
+    }
+
+    private static bool TryGetShelfPreviewPlacement(out MediaPlacement placement)
+    {
+        placement = MediaPlacement.FaceOut;
+        PlayerInteractionTool tool = UnityEngine.Object.FindFirstObjectByType<PlayerInteractionTool>();
+        if (tool == null || CurrentMediaPlacementField == null || CurrentLookingAtContainerField == null
+            || CurrentLookingAtContainerField.GetValue(tool) is not PlaceableMediaContainer)
+            return false;
+
+        object value = CurrentMediaPlacementField.GetValue(tool);
+        if (value is not MediaPlacement current) return false;
+        placement = current;
+        return true;
     }
 
     private void FindLabelRenderer()
