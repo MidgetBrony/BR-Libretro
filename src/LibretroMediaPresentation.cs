@@ -6,7 +6,6 @@ using SteamShelf;
 using SteamShelf.Media;
 using SteamShelf.Placeables;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -65,13 +64,12 @@ internal sealed class LibretroMediaPresentation : IDisposable
 internal sealed class LibretroMediaVisual : MonoBehaviour
 {
     private static readonly Dictionary<string, Task<GltfImport>> Imports = new(StringComparer.OrdinalIgnoreCase);
-    private static Font topLabelFont;
     private SteamGameData game;
     private CorePresentation definition;
     private MediaVisualOverrideContext context;
     private Renderer labelRenderer;
     private Mesh labelMesh;
-    private Material topLabelMaterial;
+    private Texture2D generatedLabelTexture;
     private Texture appliedArtwork;
     private string core;
 
@@ -97,7 +95,6 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             ConfigureTransform();
             FindLabelRenderer();
             ApplyArtwork();
-            CreateNesTopLabel();
             RefreshPlacementPreviewMaterials();
             MelonLogger.Msg($"BR-MediaAPI applied '{Path.GetFileName(path)}' to {context.Usage} for '{game?.Name}'.");
         }
@@ -265,93 +262,22 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         if (!definition.UseGameArtwork || labelRenderer == null || game == null) return;
         Texture texture = SteamTextureCache.GetBoxArt(game);
         if (texture == null || texture == appliedArtwork) return;
+        Texture labelTexture = texture;
+        if (string.Equals(Path.GetFileName(definition.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase))
+        {
+            if (generatedLabelTexture != null) Destroy(generatedLabelTexture);
+            generatedLabelTexture = NesCartridgeLabel.Create(game.Name, texture);
+            labelTexture = generatedLabelTexture;
+        }
         foreach (Material material in labelRenderer.materials)
         {
             if (material == null || material.name.IndexOf(definition.LabelMaterial ?? string.Empty, StringComparison.OrdinalIgnoreCase) < 0) continue;
-            material.mainTexture = texture;
-            ApplyTexture(material, "_MainTex", texture);
-            ApplyTexture(material, "_BaseMap", texture);
-            ApplyTexture(material, "_BaseColorTexture", texture);
+            material.mainTexture = labelTexture;
+            ApplyTexture(material, "_MainTex", labelTexture);
+            ApplyTexture(material, "_BaseMap", labelTexture);
+            ApplyTexture(material, "_BaseColorTexture", labelTexture);
         }
         appliedArtwork = texture;
-    }
-
-    private void CreateNesTopLabel()
-    {
-        if (!string.Equals(Path.GetFileName(definition.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase)) return;
-
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-        Bounds bounds = BoundsRelativeTo(transform, renderers);
-        if (bounds.size.x <= 0.001f || bounds.size.y <= 0.001f || bounds.size.z <= 0.001f) return;
-
-        // NES edge labels are small paper/vinyl insets within the moulded shell,
-        // not plaques covering most of the cartridge thickness.
-        float width = bounds.size.x * 0.52f;
-        float height = bounds.size.z * 0.34f;
-        float depth = Mathf.Max(0.0015f, bounds.size.y * 0.0004f);
-        Vector3 center = new(bounds.center.x, bounds.min.y - depth * 0.5f, bounds.center.z);
-
-        GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        panel.name = "NES Top Title Label";
-        panel.transform.SetParent(transform, false);
-        panel.transform.localPosition = center;
-        panel.transform.localRotation = Quaternion.identity;
-        panel.transform.localScale = new Vector3(width, depth, height);
-        Collider collider = panel.GetComponent<Collider>();
-        if (collider != null) Destroy(collider);
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Unlit")
-            ?? Shader.Find("Unlit/Color")
-            ?? Shader.Find("Standard");
-        topLabelMaterial = new Material(shader) { name = "BR-Libretro NES Top Label", color = Color.black };
-        if (topLabelMaterial.HasProperty("_BaseColor")) topLabelMaterial.SetColor("_BaseColor", Color.black);
-        panel.GetComponent<Renderer>().sharedMaterial = topLabelMaterial;
-
-        GameObject titleObject = new("NES Top Title");
-        titleObject.transform.SetParent(transform, false);
-        titleObject.transform.localPosition = new Vector3(center.x, bounds.min.y - depth * 1.1f, center.z);
-        titleObject.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-
-        TextMesh title = titleObject.AddComponent<TextMesh>();
-        title.text = game?.Name ?? string.Empty;
-        title.font = GetTopLabelFont();
-        title.color = Color.white;
-        title.anchor = TextAnchor.MiddleCenter;
-        title.alignment = TextAlignment.Center;
-        title.fontSize = 64;
-        title.characterSize = 1f;
-        title.richText = false;
-        title.font.RequestCharactersInTexture(title.text, title.fontSize, FontStyle.Normal);
-
-        MeshRenderer titleRenderer = title.GetComponent<MeshRenderer>();
-        titleRenderer.sharedMaterial = title.font.material;
-        titleRenderer.enabled = false;
-        titleObject.transform.localScale = Vector3.zero;
-        StartCoroutine(FitTopLabelText(titleObject.transform, titleRenderer, width, height, title.text.Length));
-    }
-
-    private static IEnumerator FitTopLabelText(Transform titleTransform, MeshRenderer titleRenderer,
-        float availableWidth, float availableHeight, int characterCount)
-    {
-        yield return null;
-        if (titleTransform == null || titleRenderer == null) yield break;
-
-        Vector3 textSize = titleRenderer.localBounds.size;
-        float estimatedWidth = Mathf.Max(1, characterCount) * 32f;
-        float fitWidth = availableWidth * 0.84f / (textSize.x > 0.0001f ? textSize.x : estimatedWidth);
-        float fitHeight = availableHeight * 0.56f / (textSize.y > 0.0001f ? textSize.y : 64f);
-        float fit = Mathf.Min(fitWidth, fitHeight);
-        titleTransform.localScale = Vector3.one * Mathf.Clamp(fit, 0.00001f, 0.1f);
-        titleRenderer.enabled = true;
-    }
-
-    private static Font GetTopLabelFont()
-    {
-        if (topLabelFont != null) return topLabelFont;
-        topLabelFont = Font.CreateDynamicFontFromOSFont("Segoe UI", 64)
-            ?? Font.CreateDynamicFontFromOSFont("Arial", 64);
-        topLabelFont.name = "BR-Libretro Segoe UI";
-        return topLabelFont;
     }
 
     private void RefreshPlacementPreviewMaterials()
@@ -376,6 +302,6 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private void OnDestroy()
     {
         if (labelMesh != null) Destroy(labelMesh);
-        if (topLabelMaterial != null) Destroy(topLabelMaterial);
+        if (generatedLabelTexture != null) Destroy(generatedLabelTexture);
     }
 }
