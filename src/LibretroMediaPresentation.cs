@@ -154,8 +154,9 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         };
         transform.localPosition = Vector3.zero;
         transform.localScale = Vector3.one;
+        float faceRotation = definition.FaceRotationDegrees + ShelfPlacementQuarterTurn();
         transform.localRotation = Quaternion.Euler(Value(rotation, 0), Value(rotation, 1), Value(rotation, 2))
-            * Quaternion.AngleAxis(definition.FaceRotationDegrees, Vector3.forward);
+            * Quaternion.AngleAxis(faceRotation, Vector3.forward);
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
         // Measure in the imported model's own coordinate space. World AABBs
@@ -216,6 +217,18 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     }
 
     private static float Value(float[] values, int index) => values.Length > index ? values[index] : 0f;
+
+    private float ShelfPlacementQuarterTurn()
+    {
+        if (context?.Usage != MediaVisualUsage.Shelf || context.Target == null) return 0f;
+
+        Quaternion targetRotation = context.Target.transform.localRotation;
+        if (Quaternion.Angle(targetRotation, Quaternion.Euler(90f, -90f, 0f)) < 2f)
+            return definition.ShelfSpineQuarterTurnDegrees;
+        if (Quaternion.Angle(targetRotation, Quaternion.Euler(180f, -90f, 0f)) < 2f)
+            return definition.ShelfFaceUpQuarterTurnDegrees;
+        return 0f;
+    }
 
     private void FindLabelRenderer()
     {
