@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 
 namespace BR_Libretro;
@@ -64,11 +65,14 @@ internal sealed class LibretroMediaPresentation : IDisposable
 internal sealed class LibretroMediaVisual : MonoBehaviour
 {
     private static readonly Dictionary<string, Task<GltfImport>> Imports = new(StringComparer.OrdinalIgnoreCase);
+    private static TMP_FontAsset topLabelFont;
+    private static Font topLabelSourceFont;
     private SteamGameData game;
     private CorePresentation definition;
     private MediaVisualOverrideContext context;
     private Renderer labelRenderer;
     private Mesh labelMesh;
+    private Material topLabelMaterial;
     private Texture appliedArtwork;
     private string core;
 
@@ -94,6 +98,7 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             ConfigureTransform();
             FindLabelRenderer();
             ApplyArtwork();
+            CreateNesTopLabel();
             RefreshPlacementPreviewMaterials();
             MelonLogger.Msg($"BR-MediaAPI applied '{Path.GetFileName(path)}' to {context.Usage} for '{game?.Name}'.");
         }
@@ -272,6 +277,63 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
         appliedArtwork = texture;
     }
 
+    private void CreateNesTopLabel()
+    {
+        if (!string.Equals(Path.GetFileName(definition.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase)) return;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        Bounds bounds = BoundsRelativeTo(transform, renderers);
+        if (bounds.size.x <= 0.001f || bounds.size.y <= 0.001f || bounds.size.z <= 0.001f) return;
+
+        float width = bounds.size.x * 0.64f;
+        float height = bounds.size.y * 0.62f;
+        float depth = Mathf.Max(0.008f, bounds.size.z * 0.002f);
+        Vector3 center = new(bounds.center.x, bounds.center.y, bounds.max.z + depth * 0.5f);
+
+        GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        panel.name = "NES Top Title Label";
+        panel.transform.SetParent(transform, false);
+        panel.transform.localPosition = center;
+        panel.transform.localRotation = Quaternion.identity;
+        panel.transform.localScale = new Vector3(width, height, depth);
+        Collider collider = panel.GetComponent<Collider>();
+        if (collider != null) Destroy(collider);
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Unlit")
+            ?? Shader.Find("Unlit/Color")
+            ?? Shader.Find("Standard");
+        topLabelMaterial = new Material(shader) { name = "BR-Libretro NES Top Label", color = Color.black };
+        if (topLabelMaterial.HasProperty("_BaseColor")) topLabelMaterial.SetColor("_BaseColor", Color.black);
+        panel.GetComponent<Renderer>().sharedMaterial = topLabelMaterial;
+
+        GameObject titleObject = new("NES Top Title");
+        titleObject.transform.SetParent(transform, false);
+        titleObject.transform.localPosition = new Vector3(center.x, center.y, bounds.max.z + depth * 1.1f);
+        titleObject.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+        TextMeshPro title = titleObject.AddComponent<TextMeshPro>();
+        title.text = game?.Name ?? string.Empty;
+        title.font = GetTopLabelFont();
+        title.color = Color.white;
+        title.alignment = TextAlignmentOptions.Center;
+        title.enableAutoSizing = true;
+        title.fontSizeMin = Mathf.Max(0.035f, height * 0.12f);
+        title.fontSizeMax = Mathf.Max(0.08f, height * 0.58f);
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        title.rectTransform.sizeDelta = new Vector2(width * 0.9f, height * 0.78f);
+    }
+
+    private static TMP_FontAsset GetTopLabelFont()
+    {
+        if (topLabelFont != null) return topLabelFont;
+        topLabelSourceFont = Font.CreateDynamicFontFromOSFont("Segoe UI", 64)
+            ?? Font.CreateDynamicFontFromOSFont("Arial", 64);
+        topLabelFont = TMP_FontAsset.CreateFontAsset(topLabelSourceFont);
+        topLabelFont.name = "BR-Libretro Segoe UI";
+        return topLabelFont;
+    }
+
     private void RefreshPlacementPreviewMaterials()
     {
         PlacementTag tag = GetComponentInParent<PlacementTag>();
@@ -294,5 +356,6 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private void OnDestroy()
     {
         if (labelMesh != null) Destroy(labelMesh);
+        if (topLabelMaterial != null) Destroy(topLabelMaterial);
     }
 }

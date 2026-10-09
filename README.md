@@ -25,7 +25,7 @@ No cores, BIOS files, or ROMs are distributed by this project.
 
 ## Physical core models
 
-Games resolved to the `mesen`, `fceumm`, or `nestopia` cores use an NES cartridge instead of the standard BOXROOM game case. The original game object, collider, pickup behavior, launch data, and saved placement remain unchanged; only its visible shell is replaced. BOXROOM cover art is applied to the cartridge's separate label surface.
+Games resolved to the `mesen`, `fceumm`, or `nestopia` cores use an NES cartridge instead of the standard BOXROOM game case. The original game object, collider, pickup behavior, launch data, and saved placement remain unchanged; only its visible shell is replaced. BOXROOM cover art is applied only to the cartridge's broad front label. A separate black Segoe UI title label is generated on the cartridge's top edge so its name faces outward on a shelf.
 
 `Documents\br-libretro\config\core-presentation.json` maps core names to GLB models. Add another entry and place its GLB in `Documents\br-libretro\models` to give another core its own physical format. Each entry supports model filename, height in metres, placed/shelf rotation, inspection rotation, face rotation, XYZ offset, label material name, artwork on/off, and an enable switch. Restart BOXROOM after editing this file.
 
