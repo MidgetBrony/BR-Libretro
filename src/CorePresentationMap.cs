@@ -26,6 +26,23 @@ internal sealed class CorePresentationMap
         CorePresentationMap map = JsonConvert.DeserializeObject<CorePresentationMap>(File.ReadAllText(path))
             ?? new CorePresentationMap();
         map.Cores = new Dictionary<string, CorePresentation>(map.Cores ?? new(), StringComparer.OrdinalIgnoreCase);
+
+        bool updated = false;
+        foreach (CorePresentation presentation in map.Cores.Values)
+        {
+            if (string.Equals(Path.GetFileName(presentation.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase)
+                && Math.Abs(presentation.LabelRotationDegrees) < 0.01f
+                && !presentation.LabelMirrorHorizontal
+                && presentation.LabelMirrorVertical)
+            {
+                presentation.LabelRotationDegrees = 180f;
+                updated = true;
+            }
+        }
+
+        if (updated)
+            File.WriteAllText(path, JsonConvert.SerializeObject(map, Formatting.Indented));
+
         return map;
     }
 
@@ -55,7 +72,7 @@ internal sealed class CorePresentation
     public float FaceRotationDegrees { get; set; } = 180f;
     public float[] Offset { get; set; } = { 0f, 0f, 0f };
     public string LabelMaterial { get; set; } = "Material.001";
-    public float LabelRotationDegrees { get; set; } = 0f;
+    public float LabelRotationDegrees { get; set; } = 180f;
     public bool LabelMirrorHorizontal { get; set; } = false;
     public bool LabelMirrorVertical { get; set; } = true;
     public bool UseGameArtwork { get; set; } = true;
