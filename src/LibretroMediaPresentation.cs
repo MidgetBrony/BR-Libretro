@@ -75,7 +75,15 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private MediaVisualOverrideContext context;
     private Renderer labelRenderer;
     private Mesh labelMesh;
+    private Mesh endLabelMesh;
+    private Mesh labelWrapBridgeMesh;
+    private Material generatedLabelMaterial;
+    private Material generatedEndLabelMaterial;
+    private Material generatedLabelWrapBridgeMaterial;
     private Texture2D generatedLabelTexture;
+    private Texture2D generatedEndLabelTexture;
+    private Texture2D customSnesLabelTexture;
+    private bool customSnesLabelChecked;
     private Texture appliedArtwork;
     private string core;
     private float appliedPlacementTurn = float.NaN;
@@ -100,6 +108,7 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             await import.InstantiateMainSceneAsync(transform);
             if (this == null) return;
             ConfigureTransform();
+            CreateSnesArtworkLabel();
             FindLabelRenderer();
             ApplyArtwork();
             RefreshPlacementPreviewMaterials();
@@ -270,15 +279,62 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
 
     private void FindLabelRenderer()
     {
+        if (labelRenderer != null) return;
+        string wantedRenderer = definition.LabelRenderer ?? string.Empty;
         string wanted = definition.LabelMaterial ?? string.Empty;
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-        foreach (Material material in renderer.sharedMaterials)
-            if (material != null && material.name.IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            if (!string.IsNullOrEmpty(wantedRenderer)
+                && renderer.name.IndexOf(wantedRenderer, StringComparison.OrdinalIgnoreCase) < 0)
+                continue;
+            foreach (Material material in renderer.sharedMaterials)
+                if (material != null && material.name.IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    labelRenderer = renderer;
+                    ApplyLabelUvTransform(renderer);
+                    return;
+                }
+        }
+    }
+
+    private void CreateSnesArtworkLabel()
+    {
+        if (!string.Equals(Path.GetFileName(definition.Model), "snes_cartridge.glb", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0) return;
+        Material template = null;
+        foreach (Renderer renderer in renderers)
+        foreach (Material candidate in renderer.sharedMaterials)
+            if (candidate != null)
             {
-                labelRenderer = renderer;
-                ApplyLabelUvTransform(renderer);
-                return;
+                template = candidate;
+                break;
             }
+        if (template == null) return;
+
+        Bounds modelBounds = BoundsRelativeTo(transform, renderers);
+        labelRenderer = SnesCartridgeLabel.Create(
+            transform,
+            modelBounds,
+            template,
+            out labelMesh,
+            out generatedLabelMaterial);
+        SnesCartridgeLabel.CreateEndLabel(
+            transform,
+            modelBounds,
+            template,
+            game?.Name,
+            out endLabelMesh,
+            out generatedEndLabelMaterial,
+            out generatedEndLabelTexture);
+        SnesCartridgeLabel.CreateWrapBridge(
+            transform,
+            modelBounds,
+            template,
+            out labelWrapBridgeMesh,
+            out generatedLabelWrapBridgeMaterial);
     }
 
     private void ApplyLabelUvTransform(Renderer renderer)
@@ -311,16 +367,20 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private void ApplyArtwork()
     {
         if (!definition.UseGameArtwork || labelRenderer == null || game == null) return;
-        Texture texture = SteamTextureCache.GetBoxArt(game);
+        Texture texture = GetArtworkTexture();
         if (texture == null || texture == appliedArtwork) return;
+        Material[] materials = generatedLabelMaterial != null
+            ? new[] { generatedLabelMaterial }
+            : labelRenderer.materials;
+        string modelName = Path.GetFileName(definition.Model);
         Texture labelTexture = texture;
-        if (string.Equals(Path.GetFileName(definition.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(modelName, "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase))
         {
             if (generatedLabelTexture != null) Destroy(generatedLabelTexture);
             generatedLabelTexture = NesCartridgeLabel.Create(game.Name, texture);
             labelTexture = generatedLabelTexture;
         }
-        foreach (Material material in labelRenderer.materials)
+        foreach (Material material in materials)
         {
             if (material == null || material.name.IndexOf(definition.LabelMaterial ?? string.Empty, StringComparison.OrdinalIgnoreCase) < 0) continue;
             material.mainTexture = labelTexture;
@@ -329,6 +389,20 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             ApplyTexture(material, "_BaseColorTexture", labelTexture);
         }
         appliedArtwork = texture;
+    }
+
+    private Texture GetArtworkTexture()
+    {
+        if (string.Equals(Path.GetFileName(definition.Model), "snes_cartridge.glb", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!customSnesLabelChecked)
+            {
+                customSnesLabelChecked = true;
+                customSnesLabelTexture = SnesLabelArtCache.Acquire(game.AppId);
+            }
+            if (customSnesLabelTexture != null) return customSnesLabelTexture;
+        }
+        return SteamTextureCache.GetBoxArt(game);
     }
 
     private void RefreshPlacementPreviewMaterials()
@@ -353,6 +427,14 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
     private void OnDestroy()
     {
         if (labelMesh != null) Destroy(labelMesh);
+        if (endLabelMesh != null) Destroy(endLabelMesh);
+        if (labelWrapBridgeMesh != null) Destroy(labelWrapBridgeMesh);
+        if (generatedLabelMaterial != null) Destroy(generatedLabelMaterial);
+        if (generatedEndLabelMaterial != null) Destroy(generatedEndLabelMaterial);
+        if (generatedLabelWrapBridgeMaterial != null) Destroy(generatedLabelWrapBridgeMaterial);
         if (generatedLabelTexture != null) Destroy(generatedLabelTexture);
+        if (generatedEndLabelTexture != null) Destroy(generatedEndLabelTexture);
+        if (customSnesLabelTexture != null && game != null)
+            SnesLabelArtCache.Release(game.AppId, customSnesLabelTexture);
     }
 }

@@ -23,3 +23,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## SNES cartridge model
+
+"Super Mario World Game Cartridge" by Laser Design
+
+- Creator: https://sketchfab.com/Laserdesign
+- Source: https://sketchfab.com/3d-models/super-mario-world-game-cartridge-a102d3e7fe5c4770912a56e69b04898a
+- Licence: Creative Commons Attribution-NonCommercial 4.0 International
+- Licence URL: https://creativecommons.org/licenses/by-nc/4.0/
+
+Modified for BR-Libretro: the embedded source texture and branded imagery were
+removed, the material was replaced with a neutral cartridge surface, and the
+game artwork is supplied separately at runtime by BOXROOM.
+
+This asset may be used and redistributed only under the terms of CC BY-NC 4.0.

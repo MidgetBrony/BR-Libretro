@@ -1,0 +1,12 @@
+"Super Mario World Game Cartridge" by Laser Design
+https://sketchfab.com/Laserdesign
+
+Source:
+https://sketchfab.com/3d-models/super-mario-world-game-cartridge-a102d3e7fe5c4770912a56e69b04898a
+
+Licensed under Creative Commons Attribution-NonCommercial 4.0 International:
+https://creativecommons.org/licenses/by-nc/4.0/
+
+Modified for BR-Libretro: the embedded source texture and branded imagery were
+removed, the material was replaced with a neutral cartridge surface, and the
+game artwork is supplied separately at runtime by BOXROOM.

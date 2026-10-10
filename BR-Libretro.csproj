@@ -8,9 +8,9 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>BR_Libretro</AssemblyName>
     <RootNamespace>BR_Libretro</RootNamespace>
-    <AssemblyVersion>0.4.14.0</AssemblyVersion>
-    <FileVersion>0.4.14.0</FileVersion>
-    <Version>0.4.14</Version>
+    <AssemblyVersion>0.4.15.0</AssemblyVersion>
+    <FileVersion>0.4.15.0</FileVersion>
+    <Version>0.4.15</Version>
     <NoWarn>$(NoWarn);CS0649</NoWarn>
     <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
   </PropertyGroup>
@@ -18,7 +18,10 @@
     <Compile Include="src\**\*.cs" />
     <Compile Include="vendor\SK.Libretro\Scripts\**\*.cs" />
     <EmbeddedResource Include="assets\nes_cartridge.glb" LogicalName="BR_Libretro.Assets.nes_cartridge.glb" />
+    <EmbeddedResource Include="assets\snes_cartridge.glb" LogicalName="BR_Libretro.Assets.snes_cartridge.glb" />
+    <EmbeddedResource Include="assets\snes_cartridge_ATTRIBUTION.txt" LogicalName="BR_Libretro.Assets.snes_cartridge_ATTRIBUTION.txt" />
     <None Include="vendor\SK.Libretro\LICENSE" Pack="true" PackagePath="licenses\SK.Libretro-LICENSE" />
+    <None Include="THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="licenses\THIRD_PARTY_NOTICES.md" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Boxroom-TV2\Boxroom-TV.csproj" Private="false" />
@@ -29,6 +32,7 @@
     <Reference Include="Newtonsoft.Json"><HintPath>$(GamePath)\BOXROOM_Data\Managed\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>

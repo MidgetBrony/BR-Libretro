@@ -83,13 +83,15 @@ internal sealed class CoreMap
     internal bool TryIdentify(string launchExe, string launchArguments, out string core, out string rom)
     {
         core = rom = null;
-        var candidates = Regex.Matches(launchArguments ?? string.Empty, "\\\"([^\\\"]+)\\\"|([^\\s]+)")
+        var arguments = Regex.Matches(launchArguments ?? string.Empty, "\\\"([^\\\"]+)\\\"|([^\\s]+)")
             .Cast<Match>().Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
-            .Where(File.Exists).ToList();
+            .ToList();
+        string requestedCore = arguments.FirstOrDefault(p => p.EndsWith("_libretro.dll", StringComparison.OrdinalIgnoreCase));
+
+        var candidates = arguments.Where(File.Exists).ToList();
         if (File.Exists(launchExe)) candidates.Add(launchExe);
         rom = candidates.LastOrDefault(p => !p.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !p.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
         if (rom == null) return false;
-        string requestedCore = candidates.FirstOrDefault(p => p.EndsWith("_libretro.dll", StringComparison.OrdinalIgnoreCase));
         if (requestedCore != null)
         {
             core = Path.GetFileNameWithoutExtension(requestedCore);
