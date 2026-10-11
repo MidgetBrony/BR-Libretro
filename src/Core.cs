@@ -12,7 +12,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.4.15", "MidgetBrony")]
+[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.4.17", "MidgetBrony")]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 [assembly: MelonAdditionalDependencies("Boxroom_TV", "ModsPanel", "BR_MediaAPI")]
 
@@ -20,6 +20,7 @@ namespace BR_Libretro;
 
 public sealed class Core : MelonMod
 {
+    private static Core activeInstance;
     private PlayerInteractionTool interaction;
     private CoreMap coreMap;
     private LibretroMediaPresentation presentations;
@@ -30,10 +31,9 @@ public sealed class Core : MelonMod
     private Vector3 roomCameraPosition;
     private Quaternion roomCameraRotation;
     private FirstPersonController controller;
-    private bool previousPlayerCanMove, previousCameraCanMove, primaryWasPressed, powerKeyWasDown, tvMode, holdTriggered;
+    private bool previousPlayerCanMove, previousCameraCanMove, primaryWasPressed, tvMode;
     private bool firstFrameAttached;
-    private float powerKeyDownAt, unfocusedSince = -1f;
-    private MelonPreferences_Entry<string> powerKey;
+    private float unfocusedSince = -1f;
     private MelonPreferences_Entry<float> holdToStopSeconds, autoOffMinutes, tvVolume, audioRange;
     private readonly List<InputActionMap> lockedActionMaps = new();
     private readonly List<PlayerInput> lockedPlayerInputs = new();
@@ -41,18 +41,29 @@ public sealed class Core : MelonMod
 
     public override void OnInitializeMelon()
     {
+        activeInstance = this;
         DataPaths.Ensure(); coreMap = CoreMap.Load();
         CoreInstaller.Initialize(coreMap);
         presentations = new LibretroMediaPresentation(coreMap);
         MelonPreferences_Category prefs = MelonPreferences.CreateCategory("BR-Libretro");
-        powerKey = prefs.CreateEntry("PowerKey", "F2", "TV focus / power key");
         holdToStopSeconds = prefs.CreateEntry("HoldToStopSeconds", 1.25f, "Hold power key to stop game");
         autoOffMinutes = prefs.CreateEntry("AutoOffMinutes", 15f, "Stop after this many minutes outside TV mode; 0 disables");
         tvVolume = prefs.CreateEntry("Volume", 0.65f, "TV game volume");
         audioRange = prefs.CreateEntry("AudioRange", 3f, "Maximum audible distance from TV");
-        InputBindings.Initialize(prefs, powerKey);
+        InputBindings.Initialize(prefs);
         RegisterSettings();
         LoggerInstance.Msg($"Ready. Cores: {DataPaths.Cores} | BIOS/Firmware: {DataPaths.Bios}. Hold a configured game and interact with a TV.");
+    }
+
+    /// <summary>
+    /// Returns true when the held BOXROOM game points at content configured for
+    /// libretro. Other launchers use this to leave mapped games to BR-Libretro.
+    /// </summary>
+    public static bool CanHandleGame(SteamGameData game)
+    {
+        Core active = activeInstance;
+        return game != null && active?.coreMap != null &&
+               active.coreMap.TryIdentify(game.LaunchExePath, game.LaunchArguments, out _, out _);
     }
 
     public override void OnUpdate()
@@ -63,20 +74,6 @@ public sealed class Core : MelonMod
         bool primary = (context != null && context.PrimaryPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
         if (primary && !primaryWasPressed && runtime == null) TryStart();
         primaryWasPressed = primary;
-
-        bool powerDown = IsPowerKeyDown();
-        if (runtime != null)
-        {
-            if (powerDown && !powerKeyWasDown) { powerKeyDownAt = Time.unscaledTime; holdTriggered = false; }
-            if (powerDown && !holdTriggered && Time.unscaledTime - powerKeyDownAt >= Mathf.Max(0.5f, holdToStopSeconds.Value))
-            {
-                holdTriggered = true;
-                LoggerInstance.Msg("Power key held: stopping libretro game and restoring TV.");
-                StopRuntime();
-            }
-            else if (!powerDown && powerKeyWasDown && !holdTriggered) SetTvMode(!tvMode);
-        }
-        powerKeyWasDown = powerDown;
 
         if (runtime == null) return;
         if (displayLease?.IsActive != true)
@@ -111,7 +108,12 @@ public sealed class Core : MelonMod
         PlacementTag tag = interaction?.LookingAtPlaceableTag;
         if (game == null) return;
 
-        GameImagePainter painter = tag?.GetComponent<GameImagePainter>();
+        // An unmapped Steam game belongs to another launcher (for example
+        // Boxroom-VRScreen). Ignore it without filling the log with warnings.
+        if (!CanHandleGame(game)) return;
+
+        GameImagePainter painter = tag?.GetComponent<GameImagePainter>()
+                                   ?? tag?.GetComponentInChildren<GameImagePainter>(true);
         if (painter == null)
         {
             Camera view = Camera.main;
@@ -121,8 +123,11 @@ public sealed class Core : MelonMod
                 return;
             }
 
-            painter = hit.collider.GetComponentInParent<GameImagePainter>();
-            tag = painter?.GetComponent<PlacementTag>() ?? hit.collider.GetComponentInParent<PlacementTag>();
+            painter = hit.collider.GetComponent<GameImagePainter>()
+                      ?? hit.collider.GetComponentInParent<GameImagePainter>();
+            tag = hit.collider.GetComponentInParent<PlacementTag>()
+                  ?? painter?.GetComponentInParent<PlacementTag>();
+            painter ??= tag?.GetComponentInChildren<GameImagePainter>(true);
             if (painter == null || tag == null)
             {
                 LoggerInstance.Warning($"Cannot start '{game.Name}': the looked-at object is not a supported TV screen.");
@@ -154,8 +159,18 @@ public sealed class Core : MelonMod
             throw;
         }
         firstFrameAttached = false;
+        displayLease.RegisterFocusHandlers(
+            () => tvMode,
+            () => SetTvMode(true),
+            () => SetTvMode(false),
+            () =>
+            {
+                LoggerInstance.Msg("F2 held: stopping libretro game and restoring TV.");
+                StopRuntime();
+            },
+            Mathf.Max(0.5f, holdToStopSeconds.Value));
         SetTvMode(true);
-        LoggerInstance.Msg($"Starting '{game.Name}' in-process with {core}_libretro.dll. F2 toggles game/room controls.");
+        LoggerInstance.Msg($"Starting '{game.Name}' in-process with {core}_libretro.dll. Boxroom-TV owns F2 screen focus.");
     }
 
     private void SetTvMode(bool active)
@@ -271,15 +286,10 @@ public sealed class Core : MelonMod
         lockedPlayerInputs.Clear();
     }
 
-    private bool IsPowerKeyDown()
-    {
-        return InputBindings.IsPowerPressed();
-    }
-
     private void RegisterSettings()
     {
         ModsPanelApi.RegisterSection("com.midgetbrony.br-libretro", "BR-Libretro", 125).Clear()
-            .AddSlider("hold-stop", "Hold key to stop", () => holdToStopSeconds.Value,
+            .AddSlider("hold-stop", "Hold F2 to stop", () => holdToStopSeconds.Value,
                 value => { holdToStopSeconds.Value = Mathf.Clamp(value, 0.5f, 3f); MelonPreferences.Save(); }, 0.5f, 3f, false, "0.00 sec")
             .AddSlider("auto-off", "Unfocused auto-off timer", () => autoOffMinutes.Value,
                 value => { autoOffMinutes.Value = Mathf.Clamp(value, 0f, 60f); MelonPreferences.Save(); }, 0f, 60f, true, "0 min")
@@ -289,7 +299,7 @@ public sealed class Core : MelonMod
                 value => { audioRange.Value = Mathf.Clamp(value, 1f, 8f); MelonPreferences.Save(); }, 1f, 8f, false, "0.0 m")
             .AddButton("core-installer", "Libretro core installer", "OPEN", CoreInstaller.OpenMenu)
             .AddButton("configure-inputs", "Keyboard / gamepad bindings", "CONFIGURE", InputBindings.OpenMenu)
-            .AddLabel("controls", "Tap the power key to enter or leave TV controls. Hold it to stop the game. Configure player-one keyboard and gamepad bindings above. An auto-off value of 0 disables the timer.");
+            .AddLabel("controls", "Boxroom-TV owns F2: tap it to return, or look at this screen and tap it to focus again. Hold F2 to stop the game. Configure player-one controls above. An auto-off value of 0 disables the timer.");
     }
 
     public override void OnApplicationQuit()
@@ -301,6 +311,7 @@ public sealed class Core : MelonMod
 
     public override void OnDeinitializeMelon()
     {
+        if (ReferenceEquals(activeInstance, this)) activeInstance = null;
         InputBindings.CancelCapture();
         StopRuntime(!applicationQuitting);
         presentations?.Dispose();

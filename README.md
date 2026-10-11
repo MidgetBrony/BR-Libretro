@@ -4,6 +4,8 @@
 
 An in-process libretro frontend for BOXROOM. It runs user-supplied libretro cores inside BOXROOM, claims supported televisions/monitors through Boxroom-TV's shared display API, and sends BOXROOM keyboard/controller input directly to the core. It does not launch or capture RetroArch.
 
+BR-Libretro only claims the interaction when the held game's launch target identifies configured libretro content. Ordinary Steam games are left untouched for launchers such as Boxroom-VRScreen, without emitting missing-core warnings.
+
 ## User data
 
 On first launch the mod creates:
@@ -38,7 +40,7 @@ For a dedicated SNES cartridge label, place a 92:43 PNG at `steam_cache_v2\<AppI
 1. Put `mesen_libretro.dll` in `Documents\br-libretro\cores`.
 2. Keep the existing BOXROOM custom-game arguments containing the ROM/archive path. Existing RetroArch `-L` arguments are understood but RetroArch is not launched.
 3. Hold the game box, look at a supported TV, and interact.
-4. F2 toggles between emulator controls and room controls.
+4. Boxroom-TV owns F2: tap it to return to the room, or look at this claimed screen and tap F2 to focus it again.
 
 Keyboard player-one defaults: arrows, Z/B, X/A, A/Y, S/X, Enter/Start, Right Shift/Select. The first gamepad is mapped as a full 16-button libretro joypad, including shoulders, triggers and stick clicks.
 

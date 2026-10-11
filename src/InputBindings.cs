@@ -38,7 +38,6 @@ internal static class InputBindings
     {
         internal Binding Binding;
         internal bool IsKeyboard;
-        internal bool IsPowerKey;
         internal bool WaitingForRelease = true;
     }
 
@@ -62,13 +61,10 @@ internal static class InputBindings
         new(RETRO_DEVICE_ID_JOYPAD.R3, "R3", "R Stick Click", Key.None.ToString(), "RightStick")
     };
 
-    private static MelonPreferences_Entry<string> powerKey;
     private static Capture capture;
 
-    internal static void Initialize(MelonPreferences_Category preferences,
-        MelonPreferences_Entry<string> powerKeyEntry)
+    internal static void Initialize(MelonPreferences_Category preferences)
     {
-        powerKey = powerKeyEntry;
         foreach (Binding binding in Bindings)
         {
             binding.KeyboardEntry = preferences.CreateEntry(
@@ -87,16 +83,6 @@ internal static class InputBindings
         if (binding == null) return false;
         return IsKeyboardPressed(keyboard, binding.KeyboardEntry?.Value)
             || IsGamepadPressed(gamepad, binding.GamepadEntry?.Value);
-    }
-
-    internal static bool IsPowerPressed()
-    {
-        string configured = powerKey?.Value;
-        if (string.Equals(configured, Key.None.ToString(), StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (!Enum.TryParse(configured, true, out Key key) || key == Key.None)
-            key = Key.F2;
-        return Keyboard.current != null && Keyboard.current[key].isPressed;
     }
 
     internal static void UpdateCapture()
@@ -155,7 +141,7 @@ internal static class InputBindings
         ModsUi.CreateMenu(OwnerId, "BR-Libretro Controls",
                 "Configure player-one keyboard and gamepad bindings.")
             .AddButton("Keyboard bindings", OpenKeyboardMenu,
-                "Power key and all RetroPad buttons")
+                "All RetroPad buttons")
             .AddButton("Gamepad bindings", OpenGamepadMenu,
                 "RetroPad buttons; analog sticks remain automatic")
             .AddButton("Reset all defaults", ResetDefaults,
@@ -175,12 +161,10 @@ internal static class InputBindings
         capture = null;
         ModMenu menu = ModsUi.CreateMenu(OwnerId + ".keyboard", "Keyboard Bindings",
             "Select an action, release the current key, then press its replacement.");
-        menu.AddButton("TV focus / power", () => BeginCapture(null, true, true),
-            Display(powerKey?.Value));
         foreach (Binding item in Bindings)
         {
             Binding binding = item;
-            menu.AddButton(binding.Label, () => BeginCapture(binding, true, false),
+            menu.AddButton(binding.Label, () => BeginCapture(binding, true),
                 Display(binding.KeyboardEntry?.Value));
         }
         menu.AddButton("Back", OpenMenu);
@@ -197,7 +181,7 @@ internal static class InputBindings
         foreach (Binding item in Bindings)
         {
             Binding binding = item;
-            menu.AddButton(binding.Label, () => BeginCapture(binding, false, false),
+            menu.AddButton(binding.Label, () => BeginCapture(binding, false),
                 Display(binding.GamepadEntry?.Value));
         }
         menu.AddButton("Back", OpenMenu);
@@ -206,17 +190,15 @@ internal static class InputBindings
         menu.Show();
     }
 
-    private static void BeginCapture(Binding binding, bool keyboard, bool isPowerKey)
+    private static void BeginCapture(Binding binding, bool keyboard)
     {
         capture = new Capture
         {
             Binding = binding,
             IsKeyboard = keyboard,
-            IsPowerKey = isPowerKey,
             WaitingForRelease = true
         };
-        string label = isPowerKey ? "TV focus / power" : binding?.Label ?? "control";
-        ModsUi.ShowToast("Release controls, then press the new " + label + " binding.", 6f);
+        ModsUi.ShowToast("Release controls, then press the new " + (binding?.Label ?? "control") + " binding.", 6f);
     }
 
     private static void CompleteCapture(string value)
@@ -225,22 +207,18 @@ internal static class InputBindings
         capture = null;
         if (completed == null) return;
 
-        if (completed.IsPowerKey)
-            powerKey.Value = value;
-        else if (completed.IsKeyboard)
+        if (completed.IsKeyboard)
             completed.Binding.KeyboardEntry.Value = value;
         else
             completed.Binding.GamepadEntry.Value = value;
 
         MelonPreferences.Save();
-        ModsUi.ShowToast("Bound " + (completed.IsPowerKey ? "TV focus / power" : completed.Binding.Label)
-            + " to " + Display(value) + ".");
+        ModsUi.ShowToast("Bound " + completed.Binding.Label + " to " + Display(value) + ".");
         if (completed.IsKeyboard) OpenKeyboardMenu(); else OpenGamepadMenu();
     }
 
     private static void ResetDefaults()
     {
-        if (powerKey != null) powerKey.Value = Key.F2.ToString();
         foreach (Binding binding in Bindings)
         {
             binding.KeyboardEntry.Value = binding.DefaultKeyboard;
