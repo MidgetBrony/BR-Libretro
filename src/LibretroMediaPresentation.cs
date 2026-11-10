@@ -110,6 +110,8 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             ConfigureTransform();
             CreateSnesArtworkLabel();
             FindLabelRenderer();
+            if (context.Usage == MediaVisualUsage.Held)
+                SetLayerRecursively(transform, context.Target.gameObject.layer);
             ApplyArtwork();
             RefreshPlacementPreviewMaterials();
             MelonLogger.Msg($"BR-MediaAPI applied '{Path.GetFileName(path)}' to {context.Usage} for '{game?.Name}'.");
@@ -234,6 +236,14 @@ internal sealed class LibretroMediaVisual : MonoBehaviour
             else result.Encapsulate(renderer.bounds);
         }
         return result;
+    }
+
+    private static void SetLayerRecursively(Transform root, int layer)
+    {
+        if (root == null) return;
+        root.gameObject.layer = layer;
+        for (int i = 0; i < root.childCount; i++)
+            SetLayerRecursively(root.GetChild(i), layer);
     }
 
     private static float Value(float[] values, int index) => values.Length > index ? values[index] : 0f;
