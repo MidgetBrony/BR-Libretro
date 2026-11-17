@@ -13,7 +13,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.6.25", "MidgetBrony")]
+[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.6.28", "MidgetBrony")]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 [assembly: MelonAdditionalDependencies("Boxroom_TV", "ModsPanel", "BR_MediaAPI")]
 
