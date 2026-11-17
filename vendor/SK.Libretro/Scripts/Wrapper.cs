@@ -76,7 +76,7 @@ namespace SK.Libretro
         private long _frameTimeLast = 0;
         //private uint _totalFrameCount = 0;
 
-        public Wrapper(WrapperSettings settings, string coreName, string gameDirectory, string[] gameNames)
+        public Wrapper(WrapperSettings settings, string coreName, string gameDirectory, string[] gameNames, string exactContentPath = null)
         {
             _thread  = Thread.CurrentThread;
             Settings = settings;
@@ -94,7 +94,7 @@ namespace SK.Libretro
             }
 
             Core = new(this, coreName);
-            Game = new(this, gameDirectory, gameNames);
+            Game = new(this, gameDirectory, gameNames, exactContentPath);
 
             EnvironmentHandler       = new(this);
             GraphicsHandler          = new(this, settings.GraphicsProcessor);

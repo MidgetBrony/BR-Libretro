@@ -23,13 +23,7 @@ internal static class SnesEndLabelTexture
         return texture;
     }
 
-    private static string CleanTitle(string title)
-    {
-        string value = string.IsNullOrWhiteSpace(title) ? "SNES GAME" : title.Trim();
-        int region = value.LastIndexOf(" (", StringComparison.Ordinal);
-        if (region > 0 && value.EndsWith(")", StringComparison.Ordinal)) value = value.Substring(0, region);
-        return value;
-    }
+    private static string CleanTitle(string title) => RomTitle.Clean(title, "SNES GAME");
 
     private static void DrawTitle(Color32[] pixels, string title)
     {

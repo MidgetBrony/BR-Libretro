@@ -13,13 +13,16 @@ internal static class DataPaths
     internal static readonly string Config = Path.Combine(Root, "config");
     internal static readonly string Logs = Path.Combine(Root, "logs");
     internal static readonly string Models = Path.Combine(Root, "models");
+    internal static readonly string Artwork = Path.Combine(Root, "artwork");
     internal static readonly string Temp = Path.Combine(Root, "temp");
+    internal static readonly string Roms = Path.Combine(Root, "ROMs");
 
     internal static void Ensure()
     {
         MigrateLegacySystemDirectory();
-        foreach (string path in new[] { Root, Cores, Bios, Saves, States, Config, Logs, Models, Path.Combine(Root, "core_assets"), Temp })
+        foreach (string path in new[] { Root, Cores, Bios, Saves, States, Config, Logs, Models, Artwork, Path.Combine(Root, "core_assets"), Temp, Roms })
             Directory.CreateDirectory(path);
+        RomContentSession.CleanupAbandonedSessions();
     }
 
     private static void MigrateLegacySystemDirectory()

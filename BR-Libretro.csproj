@@ -8,9 +8,9 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>BR_Libretro</AssemblyName>
     <RootNamespace>BR_Libretro</RootNamespace>
-    <AssemblyVersion>0.4.20.0</AssemblyVersion>
-    <FileVersion>0.4.20.0</FileVersion>
-    <Version>0.4.20</Version>
+    <AssemblyVersion>0.6.27.0</AssemblyVersion>
+    <FileVersion>0.6.27.0</FileVersion>
+    <Version>0.6.27</Version>
     <NoWarn>$(NoWarn);CS0649</NoWarn>
     <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
   </PropertyGroup>
@@ -20,6 +20,11 @@
     <EmbeddedResource Include="assets\nes_cartridge.glb" LogicalName="BR_Libretro.Assets.nes_cartridge.glb" />
     <EmbeddedResource Include="assets\snes_cartridge.glb" LogicalName="BR_Libretro.Assets.snes_cartridge.glb" />
     <EmbeddedResource Include="assets\snes_cartridge_ATTRIBUTION.txt" LogicalName="BR_Libretro.Assets.snes_cartridge_ATTRIBUTION.txt" />
+    <EmbeddedResource Include="assets\gameboy_box_frame.png" LogicalName="BR_Libretro.Assets.gameboy_box_frame.png" />
+    <EmbeddedResource Include="assets\gameboy_color_box_frame.png" LogicalName="BR_Libretro.Assets.gameboy_color_box_frame.png" />
+    <EmbeddedResource Include="assets\gameboy_advance_box_frame.png" LogicalName="BR_Libretro.Assets.gameboy_advance_box_frame.png" />
+    <EmbeddedResource Include="assets\handheld_box_cardboard.png" LogicalName="BR_Libretro.Assets.handheld_box_cardboard.png" />
+    <EmbeddedResource Include="assets\handheld_box_top_bottom.png" LogicalName="BR_Libretro.Assets.handheld_box_top_bottom.png" />
     <None Include="vendor\SK.Libretro\LICENSE" Pack="true" PackagePath="licenses\SK.Libretro-LICENSE" />
     <None Include="THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="licenses\THIRD_PARTY_NOTICES.md" />
   </ItemGroup>
@@ -33,6 +38,7 @@
     <Reference Include="UnityEngine"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>

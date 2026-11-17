@@ -3,6 +3,7 @@ using BR_MediaAPI;
 using MelonLoader;
 using ModsPanel;
 using SteamShelf;
+using SteamShelf.ControlHints;
 using SteamShelf.Input;
 using SteamShelf.Placeables;
 using SteamShelf.PlayerTools;
@@ -12,7 +13,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.4.20", "MidgetBrony")]
+[assembly: MelonInfo(typeof(BR_Libretro.Core), "BR-Libretro", "0.6.25", "MidgetBrony")]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 [assembly: MelonAdditionalDependencies("Boxroom_TV", "ModsPanel", "BR_MediaAPI")]
 
@@ -22,8 +23,8 @@ public sealed class Core : MelonMod
 {
     private static Core activeInstance;
     private PlayerInteractionTool interaction;
+    private HintHandle launchHint;
     private CoreMap coreMap;
-    private LibretroMediaPresentation presentations;
     private LibretroRuntime runtime;
     private BoxroomTvDisplayLease displayLease;
     private AudioBridge audio;
@@ -42,9 +43,52 @@ public sealed class Core : MelonMod
     public override void OnInitializeMelon()
     {
         activeInstance = this;
-        DataPaths.Ensure(); coreMap = CoreMap.Load();
+        DataPaths.Ensure();
+        RomLifecycleDiagnostics.Initialize();
+        coreMap = CoreMap.Load();
         CoreInstaller.Initialize(coreMap);
-        presentations = new LibretroMediaPresentation(coreMap);
+        MediaApi.Register(new MediaTypeDefinition
+        {
+            Id = RomMedia.TypeId,
+            Key = RomMedia.Key,
+            DisplayName = "ROMs",
+            ModelType = typeof(RomData),
+            Library = new RomMediaLibrary(),
+            AllowOnShelves = true,
+            ShelfFactory = RomPhysicalMedia.CreateShelf,
+            PlaceableId = RomMedia.PlaceableId,
+            PlaceableDataFactory = RomPhysicalMedia.GetPlaceableData,
+            LoosePrefabFactory = RomPhysicalMedia.CreateLoose,
+            HeldPrefabFactory = RomPhysicalMedia.CreateHeld,
+            CreateUnplacedMediaBox = true,
+            UnplacedMediaBoxId = "BR_Libretro_ROM_Box",
+            UnplacedMediaBoxName = "ROM Box",
+            UnplacedMediaBoxDescription = "A box containing all discovered, unplaced ROM media",
+            UseGenericInteractionLifecycle = true,
+            LibraryGroups = RomConsoleUi.CreateGroups(coreMap),
+            Visuals = new MediaVisualDefinition
+            {
+                OnHeld = context => RomPhysicalMedia.ApplyVisual(context.Visual, (RomData)context.Item, RomVisualUsage.Held),
+                OnInspect = context => RomPhysicalMedia.ApplyVisual(context.Visual, (RomData)context.Item, RomVisualUsage.Inspect)
+            },
+            Inspect = new MediaInspectDefinition
+            {
+                PrimaryActionLabel = "Play",
+                PrefabFactory = item => RomPhysicalMedia.CreateInspect((RomData)item),
+                OnPrimaryAction = context => activeInstance?.TryStart(context.Item as RomData)
+            },
+            LibraryFolder = new MediaLibraryFolderOptions
+            {
+                DefaultPath = DataPaths.Roms,
+                SettingId = "BRLibretro.RomLibraryRoot",
+                Label = "ROM Library Root",
+                PanelTitle = "BR-Libretro ROMs",
+                PanelOrder = 125,
+                Reload = RomLibrarySystem.Reload,
+                GetStatus = RomLibrarySystem.Status,
+                ShowRootControls = false
+            }
+        });
         MelonPreferences_Category prefs = MelonPreferences.CreateCategory("BR-Libretro");
         holdToStopSeconds = prefs.CreateEntry("HoldToStopSeconds", 1.25f, "Hold power key to stop game");
         autoOffMinutes = prefs.CreateEntry("AutoOffMinutes", 15f, "Stop after this many minutes outside TV mode; 0 disables");
@@ -52,27 +96,18 @@ public sealed class Core : MelonMod
         audioRange = prefs.CreateEntry("AudioRange", 3f, "Maximum audible distance from TV");
         InputBindings.Initialize(prefs);
         RegisterSettings();
-        LoggerInstance.Msg($"Ready. Cores: {DataPaths.Cores} | BIOS/Firmware: {DataPaths.Bios}. Hold a configured game and interact with a TV.");
-    }
-
-    /// <summary>
-    /// Returns true when the held BOXROOM game points at content configured for
-    /// libretro. Other launchers use this to leave mapped games to BR-Libretro.
-    /// </summary>
-    public static bool CanHandleGame(SteamGameData game)
-    {
-        Core active = activeInstance;
-        return game != null && active?.coreMap != null &&
-               active.coreMap.TryIdentify(game.LaunchExePath, game.LaunchArguments, out _, out _);
+        LoggerInstance.Msg($"Ready. ROMs are first-class BOXROOM media. Cores: {DataPaths.Cores} | ROM library: {DataPaths.Roms}.");
     }
 
     public override void OnUpdate()
     {
         InputBindings.UpdateCapture();
         interaction ??= UnityEngine.Object.FindFirstObjectByType<PlayerInteractionTool>();
+        RomLifecycleDiagnostics.Poll(interaction);
+        UpdateLaunchHint();
         PlayerInputContext context = Singleton<InputManager>.Instance?.CurrentPlayerInputContext;
         bool primary = (context != null && context.PrimaryPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
-        if (primary && !primaryWasPressed && runtime == null) TryStart();
+        if (primary && !primaryWasPressed && runtime == null) TryStart(interaction?.CurrentHeldMediaItem as RomData);
         primaryWasPressed = primary;
 
         if (runtime == null) return;
@@ -102,15 +137,51 @@ public sealed class Core : MelonMod
         }
     }
 
-    private void TryStart()
+    private void UpdateLaunchHint()
     {
-        SteamGameData game = interaction?.CurrentHeldSteamGameData;
+        RomData game = interaction?.CurrentHeldMediaItem as RomData;
+        bool available = runtime == null && !ModsUi.IsMenuOpen && game != null &&
+                         coreMap?.TryResolve(game, out _) == true && HasLookedAtDisplay();
+        if (available)
+        {
+            launchHint ??= new HintHandle("BRLibretro.Launch", new ControlHint
+            {
+                actionLabel = "Play ROM on Display",
+                bindingKeys = new[] { "Primary" },
+                priority = 2
+            });
+            return;
+        }
+        ClearLaunchHint();
+    }
+
+    private bool HasLookedAtDisplay()
+    {
+        PlacementTag tag = interaction?.LookingAtPlaceableTag;
+        GameImagePainter painter = tag?.GetComponent<GameImagePainter>()
+                                   ?? tag?.GetComponentInChildren<GameImagePainter>(true);
+        if (painter != null && tag != null) return true;
+        Camera view = Camera.main;
+        if (view == null || !Physics.Raycast(view.transform.position, view.transform.forward, out RaycastHit hit, 4f))
+            return false;
+        painter = hit.collider.GetComponent<GameImagePainter>()
+                  ?? hit.collider.GetComponentInParent<GameImagePainter>();
+        tag = hit.collider.GetComponentInParent<PlacementTag>()
+              ?? painter?.GetComponentInParent<PlacementTag>();
+        painter ??= tag?.GetComponentInChildren<GameImagePainter>(true);
+        return painter != null && tag != null;
+    }
+
+    private void ClearLaunchHint()
+    {
+        launchHint?.Dispose();
+        launchHint = null;
+    }
+
+    private void TryStart(RomData game)
+    {
         PlacementTag tag = interaction?.LookingAtPlaceableTag;
         if (game == null) return;
-
-        // An unmapped Steam game belongs to another launcher (for example
-        // Boxroom-VRScreen). Ignore it without filling the log with warnings.
-        if (!CanHandleGame(game)) return;
 
         GameImagePainter painter = tag?.GetComponent<GameImagePainter>()
                                    ?? tag?.GetComponentInChildren<GameImagePainter>(true);
@@ -119,7 +190,7 @@ public sealed class Core : MelonMod
             Camera view = Camera.main;
             if (view == null || !Physics.Raycast(view.transform.position, view.transform.forward, out RaycastHit hit, 4f))
             {
-                LoggerInstance.Warning($"Cannot start '{game.Name}': no TV screen is under the crosshair.");
+                LoggerInstance.Warning($"Cannot start '{game.DisplayName}': no TV screen is under the crosshair.");
                 return;
             }
 
@@ -130,26 +201,27 @@ public sealed class Core : MelonMod
             painter ??= tag?.GetComponentInChildren<GameImagePainter>(true);
             if (painter == null || tag == null)
             {
-                LoggerInstance.Warning($"Cannot start '{game.Name}': the looked-at object is not a supported TV screen.");
+                LoggerInstance.Warning($"Cannot start '{game.DisplayName}': the looked-at object is not a supported TV screen.");
                 return;
             }
         }
-        if (!coreMap.TryResolve(game.LaunchExePath, game.LaunchArguments, out string core, out string rom))
+        if (!coreMap.TryResolve(game, out string core))
         {
-            LoggerInstance.Warning($"No installed libretro core mapping could resolve '{game.Name}'. Check {DataPaths.Config}\\core-map.json and {DataPaths.Cores}.");
+            LoggerInstance.Warning($"No compatible installed libretro core could resolve '{game.DisplayName}' ({game.PlatformId}). Check {DataPaths.Config}\\core-map.json and {DataPaths.Cores}.");
+            ModsUi.ShowToast("No compatible Libretro core is installed for this ROM.");
             return;
         }
 
         if (!BoxroomTvApi.TryClaimDisplay(painter, tag,
                 "com.midgetbrony.br-libretro", "BR-Libretro", out displayLease))
         {
-            LoggerInstance.Warning($"Cannot start '{game.Name}': Boxroom-TV rejected this display because it is unsupported or already in use.");
+            LoggerInstance.Warning($"Cannot start '{game.DisplayName}': Boxroom-TV rejected this display because it is unsupported or already in use.");
             ModsUi.ShowToast("That screen is unsupported or currently in use.");
             return;
         }
 
         audio = new AudioBridge();
-        try { runtime = LibretroRuntime.Start(core, rom, audio); }
+        try { runtime = LibretroRuntime.Start(core, game, audio); }
         catch
         {
             audio.Dispose();
@@ -170,7 +242,7 @@ public sealed class Core : MelonMod
             },
             Mathf.Max(0.5f, holdToStopSeconds.Value));
         SetTvMode(true);
-        LoggerInstance.Msg($"Starting '{game.Name}' in-process with {core}_libretro.dll. Boxroom-TV owns F2 screen focus.");
+        LoggerInstance.Msg($"Starting '{game.DisplayName}' in-process with {core}_libretro.dll. Boxroom-TV owns F2 screen focus.");
     }
 
     private void SetTvMode(bool active)
@@ -297,9 +369,7 @@ public sealed class Core : MelonMod
                 value => { tvVolume.Value = Mathf.Clamp01(value); MelonPreferences.Save(); }, 0f, 1f, false, "0%")
             .AddSlider("range", "TV audio range", () => audioRange.Value,
                 value => { audioRange.Value = Mathf.Clamp(value, 1f, 8f); MelonPreferences.Save(); }, 1f, 8f, false, "0.0 m")
-            .AddButton("core-installer", "Libretro core installer", "OPEN", CoreInstaller.OpenMenu)
-            .AddButton("configure-inputs", "Keyboard / gamepad bindings", "CONFIGURE", InputBindings.OpenMenu)
-            .AddLabel("controls", "Boxroom-TV owns F2: tap it to return, or look at this screen and tap it to focus again. Hold F2 to stop the game. Configure player-one controls above. An auto-off value of 0 disables the timer.");
+            .AddLabel("controls", "Boxroom-TV owns F2: tap it to return, or look at this screen and tap it to focus again. Hold F2 to stop the game. ROM controls and cores are managed from Media > ROMs. An auto-off value of 0 disables the timer.");
     }
 
     public override void OnApplicationQuit()
@@ -311,10 +381,18 @@ public sealed class Core : MelonMod
 
     public override void OnDeinitializeMelon()
     {
+        ClearLaunchHint();
         if (ReferenceEquals(activeInstance, this)) activeInstance = null;
         InputBindings.CancelCapture();
         StopRuntime(!applicationQuitting);
-        presentations?.Dispose();
-        presentations = null;
+        MediaApi.Unregister(RomMedia.Key);
+        RomConsoleUi.Dispose();
+    }
+
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+    {
+        RomLifecycleDiagnostics.RecordAll("SceneLoaded.BEFORE-RESET", $"build={buildIndex} scene={sceneName}");
+        RomLibrarySystem.ResetTracking();
+        RomLifecycleDiagnostics.RecordAll("SceneLoaded.AFTER-RESET", $"build={buildIndex} scene={sceneName}");
     }
 }

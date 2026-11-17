@@ -2,8 +2,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace BR_Libretro;
 
@@ -74,32 +72,34 @@ internal sealed class CoreMap
         }
     }
 
-    internal bool TryResolve(string launchExe, string launchArguments, out string core, out string rom)
+    internal bool TryResolve(RomData rom, out string core)
     {
-        if (!TryIdentify(launchExe, launchArguments, out core, out rom)) return false;
-        return File.Exists(Path.Combine(DataPaths.Cores, core + "_libretro.dll"));
-    }
-
-    internal bool TryIdentify(string launchExe, string launchArguments, out string core, out string rom)
-    {
-        core = rom = null;
-        var arguments = Regex.Matches(launchArguments ?? string.Empty, "\\\"([^\\\"]+)\\\"|([^\\s]+)")
-            .Cast<Match>().Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
-            .ToList();
-        string requestedCore = arguments.FirstOrDefault(p => p.EndsWith("_libretro.dll", StringComparison.OrdinalIgnoreCase));
-
-        var candidates = arguments.Where(File.Exists).ToList();
-        if (File.Exists(launchExe)) candidates.Add(launchExe);
-        rom = candidates.LastOrDefault(p => !p.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !p.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
-        if (rom == null) return false;
-        if (requestedCore != null)
+        core = null;
+        if (rom == null || !File.Exists(rom.ContentPath)) return false;
+        if (!string.IsNullOrWhiteSpace(rom.CoreOverride) && IsInstalled(rom.CoreOverride))
         {
-            core = Path.GetFileNameWithoutExtension(requestedCore);
-            if (core.EndsWith("_libretro", StringComparison.OrdinalIgnoreCase)) core = core.Substring(0, core.Length - 9);
+            core = rom.CoreOverride;
             return true;
         }
-        string extension = Path.GetExtension(rom).TrimStart('.');
-        if (!Extensions.TryGetValue(extension, out core) || string.IsNullOrWhiteSpace(core)) return false;
-        return true;
+        string platformOverride = RomLibrarySystem.GetPlatformCoreOverride(rom.PlatformId);
+        if (!string.IsNullOrWhiteSpace(platformOverride) && IsInstalled(platformOverride))
+        {
+            core = platformOverride;
+            return true;
+        }
+        if (Extensions.TryGetValue(rom.ContentExtension, out string mapped) && IsInstalled(mapped))
+        {
+            core = mapped;
+            return true;
+        }
+        if (RomPlatformCatalog.TryGet(rom.PlatformId, out RomPlatform platform))
+        {
+            foreach (string candidate in platform.PreferredCores)
+                if (IsInstalled(candidate)) { core = candidate; return true; }
+        }
+        return false;
     }
+
+    private static bool IsInstalled(string core) => !string.IsNullOrWhiteSpace(core) &&
+        File.Exists(Path.Combine(DataPaths.Cores, core + "_libretro.dll"));
 }

@@ -42,19 +42,20 @@ namespace SK.Libretro
 
         private readonly Wrapper _wrapper;
         private readonly string _gameDirectory;
+        private readonly string _exactContentPath;
         private readonly ContentOverrides _contentOverrides = new();
         private readonly List<retro_system_content_info_override> _systemContentInfoOverrides = new();
         private IntPtr _gameInfoExtPtr;
 
         private string _path          = "";
-        private string _extractedPath = "";
         private bool _needFullPath    = false;
         private bool _persistentData  = false;
 
-        public Game(Wrapper wrapper, string gameDirectory, string[] gameNames)
+        public Game(Wrapper wrapper, string gameDirectory, string[] gameNames, string exactContentPath = null)
         {
             _wrapper       = wrapper;
             _gameDirectory = gameDirectory;
+            _exactContentPath = exactContentPath;
             Names          = gameNames;
             Name           = gameNames[0];
         }
@@ -63,22 +64,13 @@ namespace SK.Libretro
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(_gameDirectory) && !string.IsNullOrWhiteSpace(Name))
+                if (!string.IsNullOrWhiteSpace(_exactContentPath))
+                {
+                    _path = _exactContentPath;
+                }
+                else if (!string.IsNullOrWhiteSpace(_gameDirectory) && !string.IsNullOrWhiteSpace(Name))
                 {
                     _path = GetGamePath(_gameDirectory, Name);
-                    if (_path is null)
-                    {
-                        // Try Zip archive
-                        var archivePath = $"{_gameDirectory}/{Name}.zip";
-                        if (FileSystem.FileExists(archivePath))
-                        {
-                            var extractDirectory = FileSystem.GetOrCreateDirectory($"{Wrapper.TempDirectory}/extracted/{Name}_{Guid.NewGuid()}");
-                            System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, extractDirectory);
-
-                            _path = GetExtractedGamePath(extractDirectory);
-                            _extractedPath = _path;
-                        }
-                    }
                 }
 
                 if (!GetGameInfo())
@@ -118,16 +110,6 @@ namespace SK.Libretro
                 throw;
             }
 
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(_extractedPath) && FileSystem.FileExists(_extractedPath))
-                    FileSystem.DeleteFile(_extractedPath);
-            }
-            catch
-            {
-
-                throw;
-            }
         }
 
         public bool GetGameInfoExt(IntPtr data)

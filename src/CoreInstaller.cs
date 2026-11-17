@@ -16,6 +16,7 @@ namespace BR_Libretro;
 internal static class CoreInstaller
 {
     private const string OwnerId = "com.midgetbrony.br-libretro.core-installer";
+    private const string ClientUserAgent = "BR-Libretro/0.6.27";
     private const string BuildbotRoot = "https://buildbot.libretro.com/nightly/windows/x86_64/latest/";
     private const string CoreInfoUrl = "https://buildbot.libretro.com/assets/frontend/info.zip";
     private const long MaximumArchiveBytes = 512L * 1024 * 1024;
@@ -89,6 +90,12 @@ internal static class CoreInstaller
 
     internal static void Initialize(CoreMap map) => coreMap = map;
 
+    internal static IReadOnlyList<string> GetInstalledCoreIds() => EnumerateInstalled()
+        .Select(package => package.Id)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     internal static void OpenMenu()
     {
         ModMenu menu = CreateMenu("", "Libretro Core Manager",
@@ -152,7 +159,7 @@ internal static class CoreInstaller
     {
         using UnityWebRequest request = UnityWebRequest.Get(BuildbotRoot);
         request.timeout = 60;
-        request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.20");
+        request.SetRequestHeader("User-Agent", ClientUserAgent);
         UnityWebRequestAsyncOperation operation = null;
         string failure = null;
         try { operation = request.SendWebRequest(); }
@@ -189,7 +196,7 @@ internal static class CoreInstaller
         {
             using UnityWebRequest infoRequest = UnityWebRequest.Get(CoreInfoUrl);
             infoRequest.timeout = 60;
-            infoRequest.SetRequestHeader("User-Agent", "BR-Libretro/0.4.20");
+            infoRequest.SetRequestHeader("User-Agent", ClientUserAgent);
             UnityWebRequestAsyncOperation infoOperation = null;
             try { infoOperation = infoRequest.SendWebRequest(); }
             catch (Exception ex) { MelonLogger.Warning("Could not request Libretro core metadata: " + ex.Message); }
@@ -330,6 +337,9 @@ internal static class CoreInstaller
         menu.AddLabel(mapped.Length == 0 ? "Mapped file types: None" : "Mapped file types: " + mapped);
         menu.AddButton(package.IsInstalled ? "Update core" : "Install core",
             () => RequestInstall(package, back), "Download and validate the latest official nightly build");
+        if (package.IsInstalled)
+            menu.AddButton("Uninstall core", () => ConfirmUninstall(package, back),
+                "Remove the installed core DLL; saved mappings and choices are kept");
         menu.AddButton("Configure file mappings", () => OpenCoreMappingsMenu(package, back),
             "Choose which file extensions launch this core");
         if (package.SupportedExtensions.Length > 0)
@@ -410,6 +420,68 @@ internal static class CoreInstaller
         BeginInstall(package, back);
     }
 
+    private static void ConfirmUninstall(CorePackage package, Action back)
+    {
+        if (installing || catalogueLoading)
+        {
+            ModsUi.ShowToast("Another core-manager operation is already in progress.");
+            return;
+        }
+        if (LibretroRuntime.Current != null)
+        {
+            ModsUi.ShowToast("Stop the running game before uninstalling a core.", 6f);
+            return;
+        }
+        if (!package.IsInstalled)
+        {
+            ModsUi.ShowToast(package.Name + " is no longer installed.");
+            OpenCoreDetails(package, back);
+            return;
+        }
+
+        int mappingCount = coreMap?.Extensions.Count(pair =>
+            string.Equals(pair.Value, package.Id, StringComparison.OrdinalIgnoreCase)) ?? 0;
+        ModMenu menu = CreateMenu(".uninstall." + package.Id, "Uninstall " + package.Name + "?",
+            package.Id + "_libretro.dll");
+        menu.AddLabel("The installed core DLL will be removed. ROM files, saves, BIOS files and settings are not deleted.");
+        menu.AddLabel(mappingCount == 0
+            ? "No file-type mappings currently use this core."
+            : (mappingCount == 1 ? "1 file-type mapping uses this core and will be kept."
+                : mappingCount + " file-type mappings use this core and will be kept."));
+        menu.AddButton("Uninstall " + package.Name, () => Uninstall(package, back),
+            "Compatible console tabs update immediately");
+        menu.AddButton("Cancel", () => OpenCoreDetails(package, back));
+        menu.Show();
+    }
+
+    private static void Uninstall(CorePackage package, Action back)
+    {
+        if (installing || catalogueLoading) return;
+        if (LibretroRuntime.Current != null)
+        {
+            ModsUi.ShowToast("Stop the running game before uninstalling a core.", 6f);
+            return;
+        }
+
+        installing = true;
+        try
+        {
+            if (File.Exists(package.Destination)) File.Delete(package.Destination);
+            if (File.Exists(package.Destination))
+                throw new IOException("The core DLL is still present after the delete attempt.");
+            RomConsoleUi.RefreshGroups(coreMap);
+            MelonLogger.Msg($"Uninstalled Libretro core {package.Id} from {package.Destination}. Saved mappings and choices were retained.");
+            ModsUi.ShowToast(package.Name + " uninstalled. Console tabs refreshed.", 8f);
+        }
+        catch (Exception ex)
+        {
+            MelonLogger.Error("Could not uninstall core " + package.Id + ": " + ex);
+            ModsUi.ShowToast("Could not uninstall " + package.Name + ": " + ex.Message, 10f);
+        }
+        finally { installing = false; }
+        OpenCoreDetails(package, back);
+    }
+
     private static void ShowCompatibilityWarning(CorePackage package, Action back)
     {
         ModMenu menu = CreateMenu(".warning", "PrBoom Compatibility Warning", "Nightly core build");
@@ -423,13 +495,14 @@ internal static class CoreInstaller
     private static void BeginInstall(CorePackage package, Action back)
     {
         if (installing || catalogueLoading) return;
+        bool newlyInstalled = !package.IsInstalled;
         installing = true;
         ModsUi.CloseMenu();
         ModsUi.ShowToast($"Downloading {package.Name} from Libretro...", 8f);
-        MelonCoroutines.Start(DownloadAndInstall(package, back));
+        MelonCoroutines.Start(DownloadAndInstall(package, back, newlyInstalled));
     }
 
-    private static IEnumerator DownloadAndInstall(CorePackage package, Action back)
+    private static IEnumerator DownloadAndInstall(CorePackage package, Action back, bool newlyInstalled)
     {
         UnityWebRequest request = null;
         string failure = null, installedHash = null, backupPath = null;
@@ -441,7 +514,7 @@ internal static class CoreInstaller
             request = new UnityWebRequest(package.DownloadUrl, "GET",
                 new DownloadHandlerFile(archivePath), null);
             request.timeout = 120;
-            request.SetRequestHeader("User-Agent", "BR-Libretro/0.4.20");
+            request.SetRequestHeader("User-Agent", ClientUserAgent);
         }
         catch (Exception ex) { failure = ex.Message; }
 
@@ -478,8 +551,11 @@ internal static class CoreInstaller
         else
         {
             string backupMessage = backupPath == null ? string.Empty : $" Previous core: {backupPath}";
+            RomConsoleUi.RefreshGroups(coreMap);
             MelonLogger.Msg($"Installed {package.Name} from {package.DownloadUrl}. SHA-256: {installedHash}.{backupMessage}");
-            ModsUi.ShowToast($"{package.Name} installed successfully.", 7f);
+            ModsUi.ShowToast(newlyInstalled
+                ? $"{package.Name} installed. Console tabs refreshed."
+                : $"{package.Name} updated successfully.", 8f);
         }
         OpenCoreDetails(package, back);
     }

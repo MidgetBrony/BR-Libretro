@@ -6,32 +6,31 @@ using System.Reflection;
 
 namespace BR_Libretro;
 
-internal sealed class CorePresentationMap
+internal sealed class RomPresentationMap
 {
-    public Dictionary<string, CorePresentation> Cores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, RomPresentation> Platforms { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    internal static CorePresentationMap Load()
+    internal static RomPresentationMap Load()
     {
         ExtractBuiltInAsset("nes_cartridge.glb", "BR_Libretro.Assets.nes_cartridge.glb", DataPaths.Models);
         ExtractBuiltInAsset("snes_cartridge.glb", "BR_Libretro.Assets.snes_cartridge.glb", DataPaths.Models);
         ExtractBuiltInAsset("snes_cartridge_ATTRIBUTION.txt", "BR_Libretro.Assets.snes_cartridge_ATTRIBUTION.txt", DataPaths.Models);
-        string path = Path.Combine(DataPaths.Config, "core-presentation.json");
+        string path = Path.Combine(DataPaths.Config, "rom-presentation.json");
         if (!File.Exists(path))
         {
-            var defaults = new CorePresentationMap();
-            foreach (string core in new[] { "mesen", "fceumm", "nestopia" })
-                defaults.Cores[core] = CorePresentation.NesCartridge();
-            defaults.Cores["snes9x"] = CorePresentation.SnesCartridge();
+            var defaults = new RomPresentationMap();
+            defaults.Platforms["nes"] = RomPresentation.NesCartridge();
+            defaults.Platforms["snes"] = RomPresentation.SnesCartridge();
             File.WriteAllText(path, JsonConvert.SerializeObject(defaults, Formatting.Indented));
             return defaults;
         }
 
-        CorePresentationMap map = JsonConvert.DeserializeObject<CorePresentationMap>(File.ReadAllText(path))
-            ?? new CorePresentationMap();
-        map.Cores = new Dictionary<string, CorePresentation>(map.Cores ?? new(), StringComparer.OrdinalIgnoreCase);
+        RomPresentationMap map = JsonConvert.DeserializeObject<RomPresentationMap>(File.ReadAllText(path))
+            ?? new RomPresentationMap();
+        map.Platforms = new Dictionary<string, RomPresentation>(map.Platforms ?? new(), StringComparer.OrdinalIgnoreCase);
 
         bool updated = false;
-        foreach (CorePresentation presentation in map.Cores.Values)
+        foreach (RomPresentation presentation in map.Platforms.Values)
         {
             if (string.Equals(Path.GetFileName(presentation.Model), "nes_cartridge.glb", StringComparison.OrdinalIgnoreCase)
                 && !presentation.LabelMirrorHorizontal
@@ -53,9 +52,14 @@ internal sealed class CorePresentationMap
             }
         }
 
-        if (!map.Cores.ContainsKey("snes9x"))
+        if (!map.Platforms.ContainsKey("nes"))
         {
-            map.Cores["snes9x"] = CorePresentation.SnesCartridge();
+            map.Platforms["nes"] = RomPresentation.NesCartridge();
+            updated = true;
+        }
+        if (!map.Platforms.ContainsKey("snes"))
+        {
+            map.Platforms["snes"] = RomPresentation.SnesCartridge();
             updated = true;
         }
 
@@ -95,9 +99,9 @@ internal sealed class CorePresentationMap
         }
     }
 
-    private static void ApplySnesDefaults(CorePresentation presentation)
+    private static void ApplySnesDefaults(RomPresentation presentation)
     {
-        CorePresentation defaults = CorePresentation.SnesCartridge();
+        RomPresentation defaults = RomPresentation.SnesCartridge();
         presentation.HeightMetres = defaults.HeightMetres;
         presentation.LabelRenderer = defaults.LabelRenderer;
         presentation.LabelMaterial = defaults.LabelMaterial;
@@ -107,7 +111,7 @@ internal sealed class CorePresentationMap
     }
 }
 
-internal sealed class CorePresentation
+internal sealed class RomPresentation
 {
     public bool Enabled { get; set; } = true;
     public string Model { get; set; } = "nes_cartridge.glb";
@@ -128,9 +132,9 @@ internal sealed class CorePresentation
     public bool LabelMirrorVertical { get; set; } = true;
     public bool UseGameArtwork { get; set; } = true;
 
-    internal static CorePresentation NesCartridge() => new();
+    internal static RomPresentation NesCartridge() => new();
 
-    internal static CorePresentation SnesCartridge() => new()
+    internal static RomPresentation SnesCartridge() => new()
     {
         Model = "snes_cartridge.glb",
         HeightMetres = 0.14f,

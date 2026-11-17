@@ -3,7 +3,7 @@
   "id": "br-libretro",
   "name": "BR-Libretro",
   "author": "MidgetBrony",
-  "description": "Experimental in-process libretro emulation for BOXROOM with configurable input and physical cartridge models.",
+  "description": "Experimental first-class ROM media and in-process Libretro emulation for BOXROOM.",
   "repository": "https://github.com/MidgetBrony/BR-Libretro",
   "experimental": true,
   "requirements": { "melonLoader": "0.7.0" },
@@ -15,12 +15,12 @@
     },
     {
       "manifest": "https://raw.githubusercontent.com/MidgetBrony/BR-MediaAPI/refs/heads/main/manifest.json",
-      "minimumVersion": "1.1.7",
+      "minimumVersion": "1.1.20",
       "required": true
     },
     {
       "manifest": "https://raw.githubusercontent.com/MidgetBrony/ModsPanel/refs/heads/master/manifest.json",
-      "minimumVersion": "2.6.3",
+      "minimumVersion": "2.7.5",
       "required": true
     }
   ],

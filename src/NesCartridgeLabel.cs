@@ -57,13 +57,7 @@ internal static class NesCartridgeLabel
         return texture;
     }
 
-    private static string CleanTitle(string title)
-    {
-        string value = string.IsNullOrWhiteSpace(title) ? "NES GAME" : title.Trim();
-        int region = value.LastIndexOf(" (", StringComparison.Ordinal);
-        if (region > 0 && value.EndsWith(")", StringComparison.Ordinal)) value = value.Substring(0, region);
-        return value;
-    }
+    private static string CleanTitle(string title) => RomTitle.Clean(title, "NES GAME");
 
     private static Texture2D MakeReadable(Texture source, out bool ownsTexture)
     {
