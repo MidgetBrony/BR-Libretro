@@ -12,6 +12,7 @@ public sealed class RomData : IMediaItem
     public string ArchiveEntry { get; internal set; } = string.Empty;
     public string PlatformId { get; internal set; } = string.Empty;
     public string CoverArtPath { get; internal set; } = string.Empty;
+    public string BoxLogoPath { get; internal set; } = string.Empty;
     public string CoreOverride { get; set; } = string.Empty;
     public string CaseColor { get; internal set; } = string.Empty;
     public long IgdbId { get; internal set; }
@@ -27,12 +28,22 @@ public sealed class RomData : IMediaItem
     public bool IsInHand { get; set; }
     public bool IsFullyLoaded => true;
     public bool CoverArtLoaded => !string.IsNullOrWhiteSpace(CoverArtPath) && File.Exists(CoverArtPath);
+    public bool BoxLogoLoaded => !string.IsNullOrWhiteSpace(BoxLogoPath) && File.Exists(BoxLogoPath);
     public byte[] CoverArtBytes
     {
         get
         {
             if (!CoverArtLoaded) return null;
             try { return File.ReadAllBytes(CoverArtPath); }
+            catch { return null; }
+        }
+    }
+    public byte[] BoxLogoBytes
+    {
+        get
+        {
+            if (!BoxLogoLoaded) return null;
+            try { return File.ReadAllBytes(BoxLogoPath); }
             catch { return null; }
         }
     }

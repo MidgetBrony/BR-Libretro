@@ -131,6 +131,8 @@ internal static class RomConsoleUi
         menu.AddButton(rom.HasIgdbMetadata ? "Change IGDB match" : "Find IGDB metadata",
             () => IgdbMetadata.OpenForRom(rom, () => Open(platform)),
             rom.HasIgdbMetadata ? "Replace the cached title, details and cover" : "Search by cleaned ROM title and console");
+        menu.AddButton("Choose SteamGridDB artwork", () => RomArtworkEditor.OpenSteamGridArtwork(rom, () => Open(platform)),
+            "Uses SteamGridBox for portrait, square, wide, hero and box-logo artwork");
         menu.AddDropdown("Core for selected ROM", () => coreLabels,
             () => CoreIndex(coreIds, rom.CoreOverride),
             index =>
