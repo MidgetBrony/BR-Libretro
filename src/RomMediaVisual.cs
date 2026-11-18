@@ -144,7 +144,14 @@ internal sealed class RomMediaVisual : MonoBehaviour
         if (content == null) return;
         foreach (EmbeddedArtworkBinding binding in embeddedArtwork) binding.SetVisible(visible);
         foreach (Renderer renderer in content.GetComponentsInChildren<Renderer>(true))
-            renderer.enabled = visible || !renderer.name.Contains("Artwork");
+        {
+            // BOXROOM hides cover art for shelf items whose front face is occluded.
+            // A box-spine logo is side identification, not cover art, and must remain
+            // visible when boxes are packed together.
+            bool isSpineLogo = renderer.name.IndexOf("Spine Logo", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isCoverArtwork = renderer.name.IndexOf("Artwork", StringComparison.OrdinalIgnoreCase) >= 0 && !isSpineLogo;
+            renderer.enabled = visible || !isCoverArtwork;
+        }
     }
 
     internal void SetVisible(bool value)
@@ -435,7 +442,7 @@ internal sealed class RomMediaVisual : MonoBehaviour
         Collider collider = face.GetComponent<Collider>(); if (collider != null) Destroy(collider);
         Renderer renderer = face.GetComponent<Renderer>();
         renderer.material = CreateTransparentLogoMaterial(texture);
-        renderer.enabled = artworkVisible;
+        renderer.enabled = true;
         generated.Add(renderer.material);
     }
 

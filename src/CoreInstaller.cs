@@ -16,7 +16,7 @@ namespace BR_Libretro;
 internal static class CoreInstaller
 {
     private const string OwnerId = "com.midgetbrony.br-libretro.core-installer";
-    private const string ClientUserAgent = "BR-Libretro/0.6.35";
+    private const string ClientUserAgent = "BR-Libretro/0.6.36";
     private const string BuildbotRoot = "https://buildbot.libretro.com/nightly/windows/x86_64/latest/";
     private const string CoreInfoUrl = "https://buildbot.libretro.com/assets/frontend/info.zip";
     private const long MaximumArchiveBytes = 512L * 1024 * 1024;

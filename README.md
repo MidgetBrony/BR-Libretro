@@ -1,6 +1,6 @@
 # BR-Libretro
 
-> **Experimental:** 0.6.35 replaces the earlier Steam/Custom Game media format. Old game-case placements are not migrated.
+> **Experimental:** 0.6.36 replaces the earlier Steam/Custom Game media format. Old game-case placements are not migrated.
 
 BR-Libretro is an in-process Libretro frontend for BOXROOM. ROMs are registered as first-class BR-MediaAPI media with their own stable identities, physical objects, shelves, held/inspect presentation, and room persistence. RetroArch is not required or launched.
 

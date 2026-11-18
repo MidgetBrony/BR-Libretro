@@ -32,7 +32,7 @@ internal static class RomLifecycleDiagnostics
         Directory.CreateDirectory(folder);
         logPath = Path.Combine(folder, $"rom-lifecycle-{DateTime.Now:yyyyMMdd-HHmmss}.log");
         WriteRaw("BR-Libretro ROM lifecycle diagnostic session");
-        WriteRaw($"Version=0.6.35 Started={DateTimeOffset.Now:O}");
+        WriteRaw($"Version=0.6.36 Started={DateTimeOffset.Now:O}");
         MelonLogger.Msg($"ROM lifecycle diagnostics: {logPath}");
     }
 
