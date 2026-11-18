@@ -49,7 +49,6 @@ internal sealed class RomMediaVisual : MonoBehaviour
     [SerializeField] private Renderer layoutAnchor;
     private Texture2D artwork;
     private Texture2D generatedLabel;
-    private Texture2D boxLogo;
     private readonly List<UnityEngine.Object> generated = new();
     private int generation;
     private bool artworkVisible = true;
@@ -100,10 +99,8 @@ internal sealed class RomMediaVisual : MonoBehaviour
         generated.Clear();
         if (artwork != null) Destroy(artwork);
         if (generatedLabel != null) Destroy(generatedLabel);
-        if (boxLogo != null) Destroy(boxLogo);
         artwork = null;
         generatedLabel = null;
-        boxLogo = null;
     }
 
     internal static void RefreshItem(RomData item)
@@ -187,12 +184,8 @@ internal sealed class RomMediaVisual : MonoBehaviour
             content = candidate;
             candidate = null;
             currentDefinition = definition;
-            CaptureCaseMaterials(content.transform, definition);
             ApplyArtwork(item, definition, platform.PhysicalFormat);
             ConfigureModel(content.transform, definition, usage);
-            if (!string.IsNullOrWhiteSpace(item.CaseColor) &&
-                ColorUtility.TryParseHtmlString(item.CaseColor, out Color savedColor))
-                ApplyCaseColor(savedColor);
             SetLayer(content.transform, gameObject.layer);
             content.SetActive(visible);
             RefreshPlacementPreviewMaterials();
@@ -324,11 +317,6 @@ internal sealed class RomMediaVisual : MonoBehaviour
         Renderer bodyRenderer = body.GetComponent<Renderer>();
         bodyRenderer.material = new Material(Shader.Find("Standard")); generated.Add(bodyRenderer.material);
         bodyRenderer.material.color = platform.PhysicalFormat == RomPhysicalFormat.Disc ? new Color(0.75f, 0.78f, 0.82f) : new Color(0.12f, 0.12f, 0.12f);
-        caseMaterial = bodyRenderer.material;
-        caseMaterials.Add(bodyRenderer.material);
-        currentCaseColor = bodyRenderer.material.color;
-        if (!string.IsNullOrWhiteSpace(item.CaseColor) && ColorUtility.TryParseHtmlString(item.CaseColor, out Color savedColor))
-            ApplyCaseColor(savedColor);
         byte[] bytes = item.CoverArtBytes;
         if (bytes != null && bytes.Length > 0)
         {
@@ -358,12 +346,6 @@ internal sealed class RomMediaVisual : MonoBehaviour
         {
             artwork = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             if (!artwork.LoadImage(bytes)) { Destroy(artwork); artwork = null; }
-        }
-        byte[] logoBytes = item.BoxLogoBytes;
-        if (logoBytes != null && logoBytes.Length > 0)
-        {
-            boxLogo = new Texture2D(2, 2, TextureFormat.RGBA32, true);
-            if (!boxLogo.LoadImage(logoBytes)) { Destroy(boxLogo); boxLogo = null; }
         }
 
         generatedLabel = HandheldRetailBoxTexture.Create(platform.Id, artwork, out Color bodyColor);
@@ -409,90 +391,9 @@ internal sealed class RomMediaVisual : MonoBehaviour
         frontRenderer.enabled = artworkVisible;
         generated.Add(frontRenderer.material);
 
-        if (boxLogo != null)
-        {
-            Texture2D spineLogo = CreateSpineLogoTexture(boxLogo);
-            generated.Add(spineLogo);
-            CreateSpineLogoFace("Left", new Vector3(-(width * 0.5f + 0.0007f), 0f, 0f),
-                Quaternion.Euler(0f, 90f, 0f), new Vector3(depth * 0.88f, height * 0.82f, 1f), spineLogo);
-            CreateSpineLogoFace("Right", new Vector3(width * 0.5f + 0.0007f, 0f, 0f),
-                Quaternion.Euler(0f, -90f, 0f), new Vector3(depth * 0.88f, height * 0.82f, 1f), spineLogo);
-        }
-
         ConfigureProcedural(content.transform, usage);
         SetLayer(content.transform, gameObject.layer);
         RefreshPlacementPreviewMaterials();
-    }
-
-    private void CreateSpineLogoFace(string side, Vector3 position, Quaternion rotation, Vector3 scale, Texture texture)
-    {
-        GameObject face = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        face.name = "Handheld Box " + side + " Spine Logo Artwork";
-        face.transform.SetParent(content.transform, false);
-        face.transform.localPosition = position;
-        face.transform.localRotation = rotation;
-        face.transform.localScale = scale;
-        Collider collider = face.GetComponent<Collider>(); if (collider != null) Destroy(collider);
-        Renderer renderer = face.GetComponent<Renderer>();
-        renderer.material = CreateTransparentLogoMaterial(texture);
-        renderer.enabled = artworkVisible;
-        generated.Add(renderer.material);
-    }
-
-    private static Material CreateTransparentLogoMaterial(Texture texture)
-    {
-        Shader shader = Shader.Find("Unlit/Transparent")
-            ?? Shader.Find("Universal Render Pipeline/Unlit")
-            ?? Shader.Find("Sprites/Default")
-            ?? Shader.Find("UI/Default")
-            ?? Shader.Find("Standard")
-            ?? Shader.Find("Unlit/Texture");
-        var material = new Material(shader) { name = "BR_Libretro_TransparentSpineLogo", mainTexture = texture };
-        SetTexture(material, "_MainTex", texture);
-        SetTexture(material, "_BaseMap", texture);
-        if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
-        if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
-
-        // Configure both Built-in and URP material properties. Some BOXROOM builds strip
-        // Unlit/Transparent, so relying on that shader name alone leaves an opaque black quad.
-        material.SetOverrideTag("RenderType", "Transparent");
-        if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
-        if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
-        if (material.HasProperty("_Mode")) material.SetFloat("_Mode", 2f);
-        if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f);
-        material.DisableKeyword("_ALPHATEST_ON");
-        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        material.EnableKeyword("_ALPHABLEND_ON");
-        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-        return material;
-    }
-
-    private static Texture2D CreateSpineLogoTexture(Texture2D source)
-    {
-        const int width = 256, height = 1024;
-        var result = new Texture2D(width, height, TextureFormat.RGBA32, true);
-        var pixels = new Color32[width * height];
-        float scale = Mathf.Min(width * 0.78f / source.height, height * 0.78f / source.width);
-        int drawWidth = Math.Max(1, Mathf.RoundToInt(source.height * scale));
-        int drawHeight = Math.Max(1, Mathf.RoundToInt(source.width * scale));
-        int left = (width - drawWidth) / 2;
-        int bottom = (height - drawHeight) / 2;
-        for (int y = 0; y < drawHeight; y++)
-        for (int x = 0; x < drawWidth; x++)
-        {
-            float u = drawHeight <= 1 ? 0.5f : y / (float)(drawHeight - 1);
-            float v = drawWidth <= 1 ? 0.5f : 1f - x / (float)(drawWidth - 1);
-            pixels[(bottom + y) * width + left + x] = source.GetPixelBilinear(u, v);
-        }
-        result.name = "Handheld box spine logo";
-        result.SetPixels32(pixels);
-        result.Apply(true, false);
-        result.wrapMode = TextureWrapMode.Clamp;
-        result.filterMode = FilterMode.Bilinear;
-        return result;
     }
 
     private Material CreateSolidMaterial(Color color, float smoothness, Texture texture = null)
@@ -541,22 +442,6 @@ internal sealed class RomMediaVisual : MonoBehaviour
             if (material.HasProperty("_Color")) material.SetColor("_Color", color);
             material.color = color;
         }
-    }
-
-    private void CaptureCaseMaterials(Transform model, RomPresentation definition)
-    {
-        if (model == null) return;
-        string labelMaterial = definition?.LabelMaterial ?? string.Empty;
-        foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
-        foreach (Material material in renderer.materials)
-        {
-            if (material == null || caseMaterials.Contains(material)) continue;
-            if (!string.IsNullOrWhiteSpace(labelMaterial) &&
-                material.name.IndexOf(labelMaterial, StringComparison.OrdinalIgnoreCase) >= 0) continue;
-            caseMaterials.Add(material);
-            caseMaterial ??= material;
-        }
-        currentCaseColor = Color.white;
     }
 
     private void ConfigureProcedural(Transform model, RomVisualUsage usage)

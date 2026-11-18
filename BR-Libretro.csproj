@@ -8,9 +8,9 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>BR_Libretro</AssemblyName>
     <RootNamespace>BR_Libretro</RootNamespace>
-    <AssemblyVersion>0.6.35.0</AssemblyVersion>
-    <FileVersion>0.6.35.0</FileVersion>
-    <Version>0.6.35</Version>
+    <AssemblyVersion>0.6.28.0</AssemblyVersion>
+    <FileVersion>0.6.28.0</FileVersion>
+    <Version>0.6.28</Version>
     <NoWarn>$(NoWarn);CS0649</NoWarn>
     <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
   </PropertyGroup>
@@ -31,7 +31,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Boxroom-TV2\Boxroom-TV.csproj" Private="false" />
     <ProjectReference Include="..\BR-MediaAPI\BR-MediaAPI.csproj" Private="false" />
-    <ProjectReference Include="..\SteamGridBox\SteamGridBox.csproj" Private="false" />
     <Reference Include="Assembly-CSharp"><HintPath>$(GamePath)\BOXROOM_Data\Managed\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="MelonLoader"><HintPath>$(GamePath)\MelonLoader\net35\MelonLoader.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(GamePath)\MelonLoader\net35\0Harmony.dll</HintPath><Private>false</Private></Reference>
@@ -44,8 +43,6 @@
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.UI"><HintPath>$(GamePath)\BOXROOM_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Unity.TextMeshPro"><HintPath>$(GamePath)\BOXROOM_Data\Managed\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="glTFast"><HintPath>$(GamePath)\BOXROOM_Data\Managed\glTFast.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.InputSystem"><HintPath>$(GamePath)\BOXROOM_Data\Managed\Unity.InputSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FMODUnity"><HintPath>$(GamePath)\BOXROOM_Data\Managed\FMODUnity.dll</HintPath><Private>false</Private></Reference>

@@ -27,7 +27,7 @@ internal sealed class RomSourcesConfig
 
 internal sealed class RomRegistryFile
 {
-    public int Version { get; set; } = 4;
+    public int Version { get; set; } = 3;
     public List<RomRegistryRecord> Records { get; set; } = new();
 }
 
@@ -39,7 +39,6 @@ internal sealed class RomRegistryRecord
     public string ArchiveEntry { get; set; } = string.Empty;
     public string PlatformId { get; set; } = string.Empty;
     public string CoverArtPath { get; set; } = string.Empty;
-    public string BoxLogoPath { get; set; } = string.Empty;
     public string CoreOverride { get; set; } = string.Empty;
     public string CaseColor { get; set; } = string.Empty;
     public long IgdbId { get; set; }
@@ -282,36 +281,6 @@ internal static class RomLibrarySystem
         RomMediaVisual.RefreshItem(item);
     }
 
-    internal static void ApplyArtwork(RomData item, string path, bool boxLogo)
-    {
-        if (item == null || string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-        if (boxLogo) item.BoxLogoPath = path; else item.CoverArtPath = path;
-
-        RomRegistryFile registry = LoadRegistry();
-        RomRegistryRecord record = registry.Records.FirstOrDefault(value =>
-            string.Equals(value.Id, item.Id, StringComparison.OrdinalIgnoreCase));
-        RomRegistryRecord updated = FromData(item);
-        if (record == null) registry.Records.Add(updated);
-        else registry.Records[registry.Records.IndexOf(record)] = updated;
-        SaveAtomic(RegistryPath, registry);
-        OnItemReady?.Invoke(item);
-        RomMediaVisual.RefreshItem(item);
-    }
-
-    internal static void ClearBoxLogo(RomData item)
-    {
-        if (item == null || string.IsNullOrWhiteSpace(item.BoxLogoPath)) return;
-        item.BoxLogoPath = string.Empty;
-        RomRegistryFile registry = LoadRegistry();
-        RomRegistryRecord record = registry.Records.FirstOrDefault(value =>
-            string.Equals(value.Id, item.Id, StringComparison.OrdinalIgnoreCase));
-        if (record == null) registry.Records.Add(FromData(item));
-        else record.BoxLogoPath = string.Empty;
-        SaveAtomic(RegistryPath, registry);
-        OnItemReady?.Invoke(item);
-        RomMediaVisual.RefreshItem(item);
-    }
-
     internal static string PlatformStatus(string platformId)
     {
         string path = GetPlatformSourcePath(platformId);
@@ -323,7 +292,7 @@ internal static class RomLibrarySystem
     {
         if (!File.Exists(RegistryPath)) return new RomRegistryFile();
         RomRegistryFile value = JsonConvert.DeserializeObject<RomRegistryFile>(File.ReadAllText(RegistryPath)) ?? new RomRegistryFile();
-        value.Version = 4;
+        value.Version = 3;
         value.Records ??= new List<RomRegistryRecord>();
         return value;
     }
@@ -398,7 +367,7 @@ internal static class RomLibrarySystem
     private static RomData ToData(RomRegistryRecord value) => new()
     {
         Id = value.Id, Title = value.Title, ContentPath = value.ContentPath, ArchiveEntry = value.ArchiveEntry,
-        PlatformId = value.PlatformId, CoverArtPath = value.CoverArtPath, BoxLogoPath = value.BoxLogoPath, CoreOverride = value.CoreOverride, CaseColor = value.CaseColor,
+        PlatformId = value.PlatformId, CoverArtPath = value.CoverArtPath, CoreOverride = value.CoreOverride, CaseColor = value.CaseColor,
         IgdbId = value.IgdbId, Summary = value.Summary, ReleaseDate = value.ReleaseDate,
         Developers = value.Developers ?? Array.Empty<string>(), Publishers = value.Publishers ?? Array.Empty<string>(), Genres = value.Genres ?? Array.Empty<string>(),
         Fingerprint = value.Fingerprint, FileSize = value.FileSize, LastWriteUtcTicks = value.LastWriteUtcTicks
@@ -407,7 +376,7 @@ internal static class RomLibrarySystem
     private static RomRegistryRecord FromData(RomData value) => new()
     {
         Id = value.Id, Title = value.Title, ContentPath = value.ContentPath, ArchiveEntry = value.ArchiveEntry,
-        PlatformId = value.PlatformId, CoverArtPath = value.CoverArtPath, BoxLogoPath = value.BoxLogoPath, CoreOverride = value.CoreOverride, CaseColor = value.CaseColor,
+        PlatformId = value.PlatformId, CoverArtPath = value.CoverArtPath, CoreOverride = value.CoreOverride, CaseColor = value.CaseColor,
         IgdbId = value.IgdbId, Summary = value.Summary, ReleaseDate = value.ReleaseDate,
         Developers = value.Developers ?? Array.Empty<string>(), Publishers = value.Publishers ?? Array.Empty<string>(), Genres = value.Genres ?? Array.Empty<string>(),
         Fingerprint = value.Fingerprint, FileSize = value.FileSize, LastWriteUtcTicks = value.LastWriteUtcTicks

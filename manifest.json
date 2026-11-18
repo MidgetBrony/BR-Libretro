@@ -22,11 +22,6 @@
       "manifest": "https://raw.githubusercontent.com/MidgetBrony/ModsPanel/refs/heads/master/manifest.json",
       "minimumVersion": "2.7.5",
       "required": true
-    },
-    {
-      "manifest": "https://raw.githubusercontent.com/MidgetBrony/SteamGridBox/refs/heads/master/manifest.json",
-      "minimumVersion": "1.5.0",
-      "required": true
     }
   ],
   "release": {
